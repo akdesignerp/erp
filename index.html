@@ -3,918 +3,2608 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AK디자인 웹 견적 입력 화면</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
-      background: #f4f7fb;
-      color: #1f2937;
-    }
-    .wrap {
-      max-width: 1680px;
-      margin: 0 auto;
-      padding: 18px;
-    }
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-    .title h1 {
-      margin: 0;
-      font-size: 30px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-    .title p {
-      margin: 6px 0 0;
-      color: #64748b;
-      font-size: 14px;
-    }
-    .btn-group {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    button {
-      border: 0;
-      border-radius: 14px;
-      padding: 13px 18px;
-      cursor: pointer;
-      font-weight: 800;
-      font-size: 14px;
-      min-height: 46px;
-    }
-    .btn-primary { background: #1d4ed8; color: #fff; }
-    .btn-light { background: #e2e8f0; color: #0f172a; }
-    .btn-ghost { background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; }
-    .tabs {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-    .tab {
-      background: #dbeafe;
-      text-align: center;
-      padding: 14px 10px;
-      border-radius: 14px;
-      font-weight: 800;
-      color: #1e3a8a;
-      min-height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .tab.active {
-      background: #1d4ed8;
-      color: #fff;
-    }
-    .quickbar {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(120px, 1fr));
-      gap: 10px;
-      margin-bottom: 14px;
-    }
-    .quickbox {
-      background: #fff;
-      border: 1px solid #dbe3ef;
-      border-radius: 16px;
-      padding: 12px 14px;
-      min-height: 78px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      box-shadow: 0 3px 14px rgba(15, 23, 42, 0.04);
-    }
-    .quickbox .k {
-      font-size: 12px;
-      color: #64748b;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-    .quickbox .v {
-      font-size: 18px;
-      font-weight: 900;
-      color: #0f172a;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .grid-main {
-      display: grid;
-      grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
-      gap: 14px;
-      margin-bottom: 14px;
-      align-items: start;
-    }
-    .card {
-      background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
-      overflow: hidden;
-      border: 1px solid #e5e7eb;
-    }
-    .card-header {
-      padding: 16px 18px;
-      border-bottom: 1px solid #eef2f7;
-      font-size: 18px;
-      font-weight: 800;
-      background: #f8fbff;
-    }
-    .card-body { padding: 18px; }
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-    }
-    .field { display: flex; flex-direction: column; gap: 7px; }
-    .field label {
-      font-size: 13px;
-      color: #475569;
-      font-weight: 800;
-    }
-    .field input, .field select, .field textarea {
-      width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 12px;
-      padding: 13px 12px;
-      font-size: 15px;
-      background: #fff;
-      min-height: 48px;
-    }
-    .field textarea {
-      min-height: 96px;
-      resize: vertical;
-      line-height: 1.5;
-    }
-    .span-2 { grid-column: span 2; }
-    .span-4 { grid-column: span 4; }
-    .summary-box {
-      border: 1px solid #e2e8f0;
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 12px;
-      background: #fff;
-    }
-    .summary-box .label {
-      font-size: 13px;
-      color: #64748b;
-      margin-bottom: 6px;
-      font-weight: 800;
-    }
-    .summary-box .value {
-      font-size: 30px;
-      font-weight: 900;
-      color: #0f172a;
-      letter-spacing: -0.02em;
-    }
-    .side-tools {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-    .mini-title {
-      margin: 18px 0 10px;
-      font-size: 15px;
-      font-weight: 800;
-    }
-    .process-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .process-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 11px 12px;
-      font-size: 14px;
-      gap: 10px;
-    }
-    .badge {
-      background: #eff6ff;
-      color: #1d4ed8;
-      border-radius: 999px;
-      padding: 7px 10px;
-      font-weight: 800;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    .table-card .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .table-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .table-wrap {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      border-radius: 12px;
-    }
-    table {
-      width: 100%;
-      min-width: 1500px;
-      border-collapse: separate;
-      border-spacing: 0;
-    }
-    thead th {
-      position: sticky;
-      top: 0;
-      background: #dbeafe;
-      color: #0f172a;
-      font-size: 13px;
-      padding: 13px 10px;
-      border-bottom: 1px solid #cbd5e1;
-      white-space: nowrap;
-      z-index: 1;
-    }
-    tbody td {
-      padding: 8px;
-      border-bottom: 1px solid #edf2f7;
-      background: #fff;
-      vertical-align: middle;
-    }
-    tbody tr:nth-child(even) td { background: #fcfdff; }
-    tbody input, tbody select {
-      width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 11px 10px;
-      font-size: 14px;
-      min-height: 44px;
-      background: #fff;
-    }
-    .amount {
-      font-weight: 900;
-      text-align: right;
-      color: #0f172a;
-      white-space: nowrap;
-      min-width: 100px;
-    }
-    .delete-btn {
-      background: #fee2e2;
-      color: #b91c1c;
-      width: 100%;
-      padding: 10px 0;
-      border-radius: 10px;
-      font-size: 13px;
-      min-height: 44px;
-    }
-    .table-hint {
-      margin-top: 10px;
-      font-size: 12px;
-      color: #64748b;
-    }
-    .footer-panels {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-      margin-top: 14px;
-    }
-    .panel {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-radius: 16px;
-      padding: 18px;
-      min-height: 170px;
-    }
-    .panel h3 {
-      margin: 0 0 10px;
-      font-size: 18px;
-    }
-    .panel p {
-      margin: 0;
-      color: #64748b;
-      line-height: 1.65;
-      font-size: 14px;
-    }
-    @media (max-width: 1300px) {
-      .quickbar { grid-template-columns: repeat(3, 1fr); }
-      .form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .span-4 { grid-column: span 3; }
-    }
-    @media (max-width: 1100px) {
-      .wrap { padding: 14px; }
-      .grid-main { grid-template-columns: 1fr; }
-      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .span-4 { grid-column: span 2; }
-      .footer-panels { grid-template-columns: 1fr; }
-      .summary-box .value { font-size: 28px; }
-      .side-tools { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 820px) {
-      .tabs { grid-template-columns: repeat(2, 1fr); }
-      .quickbar { grid-template-columns: repeat(2, 1fr); }
-      .form-grid { grid-template-columns: 1fr; }
-      .span-2, .span-4 { grid-column: span 1; }
-      .title h1 { font-size: 24px; }
-      .card-header { font-size: 17px; }
-      .summary-box .value { font-size: 24px; }
-      .side-tools { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 560px) {
-      .wrap { padding: 10px; }
-      .topbar { align-items: stretch; }
-      .btn-group, .table-actions { width: 100%; }
-      .btn-group button, .table-actions button { flex: 1 1 calc(50% - 8px); }
-      .quickbar { grid-template-columns: 1fr; }
-      .tabs { grid-template-columns: 1fr 1fr; }
-    }
+    * { box-sizing: border-box; }body {
+  margin: 0;
+  background: #f1f3f5;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  color: #333;
+}
+
+.wrap {
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.align-center,
+.td-center {
+  text-align: center;
+}
+
+.align-right,
+.td-right {
+  text-align: right;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.title-area h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #2f3438;
+}
+
+.title-area p {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.top-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 1px solid #c7ccd1;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #2d3136;
+  background: linear-gradient(145deg, #f3f5f7, #d7dce1);
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.65),
+    1px 1px 4px rgba(0,0,0,0.06);
+  transition: all 0.18s ease;
+}
+
+button:hover {
+  background: linear-gradient(145deg, #e6eaee, #c9cfd6);
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(1px);
+  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.12);
+}
+
+.btn-light,
+.btn-primary,
+.btn-dark {
+  border: 1px solid #c7ccd1;
+  color: #2d3136;
+  background: linear-gradient(145deg, #f3f5f7, #d7dce1);
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tab-btn {
+  background: linear-gradient(145deg, #eceff2, #d5dae0);
+  color: #495057;
+  border-radius: 14px;
+  padding: 14px 10px;
+  text-align: center;
+  font-weight: 800;
+  border: 1px solid #c8cdd3;
+}
+
+.tab-btn.active {
+  background: linear-gradient(145deg, #d6dbe0, #bcc3ca);
+  color: #212529;
+}
+
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mini-card {
+  background: linear-gradient(145deg, #f7f9fb, #e1e5ea);
+  border: 1px solid #cfd4da;
+  border-radius: 16px;
+  padding: 12px 14px;
+  min-height: 74px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.65),
+    1px 1px 4px rgba(0,0,0,0.05);
+}
+
+.mini-card .label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.mini-card .value {
+  font-size: 18px;
+  font-weight: 800;
+  color: #222;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.card {
+  background: linear-gradient(145deg, #f8fafb, #e3e7eb);
+  border: 1px solid #cfd4da;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.65),
+    2px 2px 6px rgba(0,0,0,0.06);
+}
+
+.card-header {
+  padding: 14px 16px;
+  background: linear-gradient(145deg, #eef1f4, #dde2e7);
+  border-bottom: 1px solid #d4d9df;
+  font-size: 22px;
+  font-weight: 800;
+  color: #2f3438;
+}
+
+.card-body {
+  padding: 16px;
+}
+
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 800;
+  color: #4b5563;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #cfd4da;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+  background: #ffffff;
+  color: #1f2937;
+  transition: all 0.15s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #aeb5bc;
+  box-shadow: 0 0 0 2px rgba(180, 185, 190, 0.15);
+}
+
+input[readonly] {
+  background: #eef1f4;
+}
+
+textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+
+.memo-box textarea {
+  min-height: 120px;
+}
+
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sum-box {
+  border: 1px solid #dde2e7;
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: linear-gradient(145deg, #fbfcfd, #eceff2);
+}
+
+.sum-box .sum-label {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.sum-box .sum-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #222;
+}
+
+.work-summary {
+  border: 1px solid #dde2e7;
+  border-radius: 16px;
+  padding: 12px;
+  background: linear-gradient(145deg, #fbfcfd, #eceff2);
+}
+
+.work-summary-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #6b7280;
+  margin-bottom: 10px;
+}
+
+.work-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.work-summary-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #d7dce1;
+}
+
+.detail-card {
+  margin-top: 14px;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-bottom: 1px solid #d9dee3;
+  background: linear-gradient(145deg, #f0f3f6, #dfe4e9);
+}
+
+.detail-header h3 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1280px;
+}
+
+thead th {
+  background: #dde2e7;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 12px 8px;
+  border-bottom: 1px solid #cfd4da;
+  text-align: center;
+  white-space: nowrap;
+}
+
+tbody td {
+  border-bottom: 1px solid #e8ebee;
+  padding: 8px;
+  vertical-align: middle;
+  background: #fff;
+}
+
+tbody tr:hover td {
+  background: #eceff2;
+}
+
+tbody td input,
+tbody td select,
+tbody td textarea {
+  margin: 0;
+  min-width: 90px;
+  padding: 10px 8px;
+  font-size: 13px;
+}
+
+tbody td textarea {
+  min-height: 40px;
+  resize: vertical;
+}
+
+.row-no {
+  width: 52px;
+  text-align: center;
+  font-weight: 800;
+}
+
+.table-btn {
+  padding: 10px 12px;
+  font-size: 12px;
+  border-radius: 10px;
+  width: 100%;
+}
+
+.delete-btn {
+  background: linear-gradient(145deg, #efe2e2, #dec6c6);
+  color: #7a1f1f;
+  border: 1px solid #cfb0b0;
+}
+
+.bottom-info {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.info-box {
+  background: linear-gradient(145deg, #f8fafb, #e3e7eb);
+  border: 1px solid #cfd4da;
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.info-box h4 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.info-box p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6b7280;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.inline-actions button {
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 24, 28, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 1080px;
+  max-height: 90vh;
+  background: linear-gradient(145deg, #f8fafb, #e4e8ec);
+  border: 1px solid #cfd4da;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid #d7dce1;
+  background: linear-gradient(145deg, #eef1f4, #dde2e7);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-title {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow: auto;
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.search-result-empty {
+  padding: 18px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.search-row-btn {
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.preview-group-row td {
+  background: #e7ebef !important;
+  font-weight: 800;
+  color: #3f4852;
+}
+
+.preview-subtotal-row td {
+  background: #f5f7f9 !important;
+  font-weight: 800;
+}
+
+.preview-empty-work {
+  color: #9ca3af;
+}
+
+.pdf-print-area {
+  display: none;
+}
+
+.pdf-sheet {
+  width: 100%;
+  min-height: auto;
+  margin: 0;
+  background: #fff;
+  color: #111;
+  padding: 0;
+  box-sizing: border-box;
+  page-break-after: always;
+  break-after: page;
+}
+
+.pdf-sheet:last-child {
+  page-break-after: auto;
+  break-after: auto;
+}
+
+.pdf-cover-sheet,
+.pdf-summary-sheet,
+.pdf-detail-sheet {
+  padding: 8mm;
+}
+
+.pdf-cover-inner {
+  min-height: 260mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.pdf-cover-title {
+  margin-top: 10mm;
+  text-align: center;
+  font-size: 28pt;
+  font-weight: 800;
+  letter-spacing: 4px;
+}
+
+
+.pdf-cover-box {
+  border: 1px solid #bbb;
+  padding: 8mm;
+}
+
+.pdf-cover-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10mm;
+  padding: 3mm 0;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 11pt;
+}
+
+.pdf-cover-row:last-child {
+  border-bottom: none;
+}
+
+
+.pdf-cover-total-label {
+  font-size: 12pt;
+  color: #555;
+  margin-bottom: 3mm;
+}
+
+.pdf-cover-total-value {
+  font-size: 24pt;
+  font-weight: 800;
+}
+
+.pdf-cover-footer {
+  margin-top: 20mm;
+  text-align: right;
+  line-height: 1.7;
+  font-size: 10pt;
+  color: #444;
+}
+
+.pdf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12mm;
+  border-bottom: 2px solid #444;
+  padding-bottom: 3mm;
+}
+
+.pdf-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+}
+
+.pdf-title {
+  font-size: 24pt;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.pdf-subtitle {
+  font-size: 11pt;
+  color: #555;
+  font-weight: 700;
+}
+
+.pdf-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  min-width: 55mm;
+}
+
+.pdf-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  font-size: 10pt;
+}
+
+.pdf-meta span {
+  color: #555;
+  font-weight: 700;
+}
+
+.pdf-meta strong {
+  color: #111;
+  font-weight: 800;
+}
+
+.pdf-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 4mm;
+  margin-bottom: 8mm;
+}
+
+.pdf-info-box {
+  border: 1px solid #cfcfcf;
+  padding: 4mm;
+  min-height: 28mm;
+}
+
+.pdf-info-title {
+  font-size: 10pt;
+  font-weight: 800;
+  margin-bottom: 3mm;
+  color: #333;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 2mm;
+}
+
+.pdf-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+  margin-bottom: 2mm;
+  font-size: 9.5pt;
+}
+
+.pdf-info-row span {
+  color: #666;
+}
+
+.pdf-info-row strong {
+  color: #111;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.pdf-section-title {
+  font-size: 18pt;
+  font-weight: 800;
+  margin-bottom: 5mm;
+  border-bottom: 2px solid #444;
+  padding-bottom: 2mm;
+}
+
+.pdf-meta-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  margin-bottom: 5mm;
+  font-size: 10pt;
+  flex-wrap: wrap;
+}
+
+.pdf-summary-table,
+.pdf-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.pdf-summary-table th,
+.pdf-summary-table td,
+.pdf-table th,
+.pdf-table td {
+  border: 1px solid #bfbfbf;
+  padding: 1.4mm 1mm;
+  box-sizing: border-box;
+  vertical-align: middle;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.pdf-summary-table th,
+.pdf-table th {
+  background: #efefef;
+  text-align: center;
+  font-weight: 800;
+}
+
+.pdf-summary-table td:last-child {
+  text-align: right;
+}
+
+.pdf-table {
+  font-size: 8.2pt;
+}
+
+.pdf-table td.center {
+  text-align: center;
+}
+
+.pdf-table td.right {
+  text-align: right;
+}
+
+.pdf-item-name {
+  font-size: 8.0pt;
+  line-height: 1.25;
+}
+
+.pdf-amount {
+  font-size: 8.1pt;
+  white-space: nowrap;
+}
+
+.pdf-note {
+  font-size: 7.7pt;
+  line-height: 1.2;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.pdf-group-row td {
+  background: #f4f4f4;
+  font-weight: 800;
+  color: #222;
+}
+
+.pdf-subtotal-row td {
+  background: #fafafa;
+  font-weight: 800;
+}
+
+.pdf-table-wrap {
+  width: 100%;
+  overflow: visible;
+  margin-top: 6mm;
+}
+
+.pdf-summary-wrap {
+  margin-top: 8mm;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pdf-summary-box {
+  width: 78mm;
+  border: 1px solid #cfcfcf;
+}
+
+.pdf-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8mm;
+  padding: 3mm 4mm;
+  border-bottom: 1px solid #e3e3e3;
+  font-size: 10pt;
+}
+
+.pdf-summary-row.total {
+  background: #efefef;
+  font-size: 11pt;
+  font-weight: 800;
+}
+
+.pdf-memo-box {
+  margin-top: 8mm;
+  border: 1px solid #cfcfcf;
+  min-height: 26mm;
+}
+
+.pdf-memo-title {
+  background: #efefef;
+  padding: 3mm 4mm;
+  font-weight: 800;
+  border-bottom: 1px solid #d9d9d9;
+}
+
+.pdf-memo-content {
+  padding: 4mm;
+  font-size: 10pt;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pdf-footer {
+  margin-top: 12mm;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pdf-company {
+  min-width: 60mm;
+  text-align: right;
+}
+
+.pdf-company-name {
+  font-size: 14pt;
+  font-weight: 800;
+  margin-bottom: 2mm;
+}
+
+.pdf-company-text {
+  font-size: 9.5pt;
+  color: #444;
+  line-height: 1.5;
+}
+
+@media (max-width: 1200px) {
+  .summary-strip {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bottom-info {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .wrap {
+    padding: 12px;
+  }
+
+  .tabs,
+  .summary-strip,
+  .form-grid-4,
+  .action-grid,
+  .search-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .top-buttons {
+    width: 100%;
+  }
+
+  .top-buttons button {
+    flex: 1 1 auto;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .detail-actions {
+    width: 100%;
+  }
+
+  .detail-actions button {
+    flex: 1 1 auto;
+  }
+
+  .modal-card {
+    max-height: 94vh;
+  }
+}
+
+@page {
+  size: A4 portrait;
+  margin: 8mm;
+}
+
+@media print {
+  html, body {
+    width: 210mm;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body {
+    overflow: hidden !important;
+  }
+
+  .wrap,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  #pdfPrintArea {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .pdf-sheet {
+    width: 100% !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 8mm !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+
+.pdf-cover-company-box {
+  margin-top: 14mm;
+  border: 1px solid #bbb;
+  padding: 6mm 7mm;
+  width: 100%;
+}
+
+.pdf-cover-company-title {
+  font-size: 11pt;
+  font-weight: 800;
+  margin-bottom: 4mm;
+  padding-bottom: 2mm;
+  border-bottom: 1px solid #ddd;
+}
+
+.pdf-cover-company-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10mm;
+  padding: 2.5mm 0;
+  border-bottom: 1px solid #efefef;
+  font-size: 10.5pt;
+}
+
+.pdf-cover-company-row:last-child {
+  border-bottom: none;
+}
+
+.pdf-cover-company-row span {
+  min-width: 24mm;
+  color: #555;
+  font-weight: 700;
+}
+
+.pdf-cover-company-row strong {
+  flex: 1;
+  text-align: right;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.pdf-summary-total-wrap {
+  margin-top: 8mm;
+  width: 100%;
+}
+
+.pdf-summary-total-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.pdf-summary-total-table th {
+ border: 1px solid #bfbfbf;
+  padding: 3.2mm 3.5mm;
+  text-align: center;
+}
+.pdf-summary-total-table td {
+  border: 1px solid #bfbfbf;
+  padding: 3.2mm 3.5mm;
+text-align: right;
+  font-size: 10.5pt;
+}
+
+
+.pdf-summary-total-final th,
+.pdf-summary-total-final td {
+  background: #efefef;
+  font-size: 12pt;
+  font-weight: 800;
+}
+
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="topbar">
-      <div class="title">
+      <div class="title-area">
         <h1>AK디자인 웹 견적 입력 화면</h1>
-        <p>노트북 + 태블릿 기준 2차본 / 자동 행추가 / 자동 계산 / 저장 API 연결 준비</p>
+        <p>검색형 불러오기 팝업 포함 / 이름·현장명·주소 일부 검색 가능</p>
       </div>
-      <div class="btn-group">
-        <button class="btn-light" id="btnLoad">불러오기</button>
-        <button class="btn-light" id="btnPdf">PDF 인쇄</button>
-        <button class="btn-primary" id="btnSave">저장</button>
+      <div class="top-buttons">
+        <button class="btn-light" onclick="openLoadModal()">불러오기</button>
+        <button class="btn-light" onclick="printQuote()">PDF 인쇄</button>
+        <button class="btn-primary" onclick="saveQuote()">저장</button>
       </div>
     </div><div class="tabs">
-  <div class="tab active">견적작성</div>
-  <div class="tab">견적요약</div>
-  <div class="tab">견적상세</div>
-  <div class="tab">회사관리</div>
+  <button class="tab-btn active" onclick="showTab('write')">견적작성</button>
+  <button class="tab-btn" onclick="showTab('summary')">견적요약</button>
+  <button class="tab-btn" onclick="showTab('detail')">견적상세</button>
+  <button class="tab-btn" onclick="showTab('company')">회사관리</button>
 </div>
 
-<div class="quickbar">
-  <div class="quickbox"><div class="k">작성일</div><div class="v" id="qConsultDateText">2026-04-11</div></div>
-  <div class="quickbox"><div class="k">고객명</div><div class="v" id="qCustomerNameText">미입력</div></div>
-  <div class="quickbox"><div class="k">현장명</div><div class="v" id="qSiteNameText">미입력</div></div>
-  <div class="quickbox"><div class="k">공사구분</div><div class="v" id="qWorkTypeText">본공사</div></div>
-  <div class="quickbox"><div class="k">차수</div><div class="v" id="qSeqText">1차</div></div>
-  <div class="quickbox"><div class="k">상태</div><div class="v" id="qStatusText">가견적</div></div>
+<div class="summary-strip">
+  <div class="mini-card"><div class="label">작성일</div><div class="value" id="topWriteDate">미입력</div></div>
+  <div class="mini-card"><div class="label">고객명</div><div class="value" id="topCustomerName">미입력</div></div>
+  <div class="mini-card"><div class="label">현장명</div><div class="value" id="topSiteName">미입력</div></div>
+  <div class="mini-card"><div class="label">공사구분</div><div class="value" id="topWorkType">본공사</div></div>
+  <div class="mini-card"><div class="label">차수</div><div class="value" id="topRevision">1차</div></div>
+  <div class="mini-card"><div class="label">상태</div><div class="value" id="topQuoteStatus">가견적</div></div>
 </div>
 
-<div class="grid-main">
+<div id="tab-write">
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-header">기본 정보</div>
+      <div class="card-body">
+        <div class="form-grid-4">
+          <div class="field"><label>견적번호</label><input id="quote_no" readonly /></div>
+          <div class="field"><label>기준견적번호</label><input id="base_quote_no" readonly /></div>
+          <div class="field"><label>차수</label><input id="revision_no" type="number" min="1" value="1" /></div>
+          <div class="field"><label>상담일/작성일</label><input id="quote_date" type="date" /></div>
+
+          <div class="field"><label>고객 선택</label><select id="customer_select" onchange="handleCustomerSelectChange()"></select></div>
+          <div class="field inline-actions">
+            <div style="width:100%;">
+              <label>신규 고객명</label>
+              <input id="customer_name" placeholder="고객명 입력" />
+            </div>
+            <button class="btn-light" onclick="saveCustomerMaster()">고객저장</button>
+          </div>
+          <div class="field"><label>연락처</label><input id="customer_phone" placeholder="연락처 입력" /></div>
+          <div class="field"><label>고객 주소</label><input id="customer_address" placeholder="고객 주소 입력" /></div>
+
+          <div class="field"><label>현장 선택</label><select id="site_select" onchange="handleSiteSelectChange()"></select></div>
+          <div class="field inline-actions">
+            <div style="width:100%;">
+              <label>신규 현장명</label>
+              <input id="site_name" placeholder="현장명 입력" />
+            </div>
+            <button class="btn-light" onclick="saveSiteMaster()">현장저장</button>
+          </div>
+          <div class="field" style="grid-column: span 2;"><label>현장주소</label><input id="site_address" placeholder="현장 주소 입력" /></div>
+
+          <div class="field">
+            <label>공사구분</label>
+            <select id="work_type">
+              <option value="본공사">본공사</option>
+              <option value="추가공사">추가공사</option>
+              <option value="부분공사">부분공사</option>
+            </select>
+          </div>
+          <div class="field"><label>공사일정</label><input id="work_period" placeholder="예: 2026-04-20 ~ 2026-04-30" /></div>
+          <div class="field"><label>평수/면적</label><input id="area_size" placeholder="예: 25평" /></div>
+          <div class="field">
+            <label>견적상태</label>
+            <select id="quote_status">
+              <option value="가견적">가견적</option>
+              <option value="확정견적">확정견적</option>
+              <option value="보류">보류</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>VAT 방식</label>
+            <select id="vat_type">
+              <option value="10">10%</option>
+              <option value="0">VAT 없음</option>
+            </select>
+          </div>
+          <div class="field"><label>기타공사비</label><input id="extra_cost" type="number" value="0" /></div>
+          <div class="field"><label>폐기물비용</label><input id="waste_cost" type="number" value="0" /></div>
+          <div class="field"><label>산재보험비</label><input id="insurance_cost" type="number" value="0" /></div>
+
+          <div class="field"><label>현장관리비</label><input id="site_manage_cost" type="number" value="0" /></div>
+          <div class="field memo-box" style="grid-column: span 3;"><label>메모</label><textarea id="quote_memo" placeholder="메모 입력"></textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="card">
+        <div class="card-header">합계 정보</div>
+        <div class="card-body">
+          <div class="action-grid">
+            <button class="btn-light" onclick="loadSites()">현장 새로고침</button>
+            <button class="btn-light" onclick="loadCustomers()">고객 새로고침</button>
+            <button class="btn-light" onclick="addQuoteRow()">행추가</button>
+            <button class="btn-light" onclick="resetQuoteForm()">신규작성</button>
+          </div>
+
+          <div class="sum-box"><div class="sum-label">직접공사비(상세합)</div><div class="sum-value" id="direct_cost_display">₩ 0</div></div>
+          <div class="sum-box"><div class="sum-label">간접비 합계</div><div class="sum-value" id="indirect_cost_display">₩ 0</div></div>
+          <div class="sum-box"><div class="sum-label">총공사비</div><div class="sum-value" id="supply_amount_display">₩ 0</div></div>
+          <div class="sum-box"><div class="sum-label">VAT</div><div class="sum-value" id="vat_amount_display">₩ 0</div></div>
+          <div class="sum-box"><div class="sum-label">실청구액</div><div class="sum-value" id="total_amount_display">₩ 0</div></div>
+
+          <div class="work-summary">
+            <div class="work-summary-title">공종별 요약</div>
+            <div class="work-summary-list" id="workSummaryList">
+              <div class="work-summary-item"><span>입력된 공종이 없습니다</span><strong>₩ 0</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card detail-card">
+    <div class="detail-header">
+      <h3>견적 상세 입력</h3>
+      <div class="detail-actions">
+        <button class="btn-light" onclick="addQuoteRow()">행추가</button>
+        <button class="btn-light" onclick="loadWorkTypes()">공종 새로고침</button>
+        <button class="btn-light" onclick="loadMaterials()">품목 새로고침</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <colgroup>
+          <col style="width: 50px;"><col style="width: 120px;"><col style="width: 140px;"><col style="width: 120px;">
+          <col style="width: 150px;"><col style="width: 110px;"><col style="width: 70px;"><col style="width: 70px;">
+          <col style="width: 90px;"><col style="width: 90px;"><col style="width: 90px;"><col style="width: 160px;">
+          <col style="width: 150px;"><col style="width: 90px;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>공종선택</th>
+            <th>품목선택</th>
+            <th>공종명</th>
+            <th>품목명</th>
+            <th>규격</th>
+            <th>단위</th>
+            <th>수량</th>
+            <th>자재비</th>
+            <th>노무비</th>
+            <th>경비</th>
+            <th>금액</th>
+            <th>비고</th>
+            <th>삭제</th>
+          </tr>
+        </thead>
+        <tbody id="quoteDetailBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bottom-info">
+    <div class="info-box"><h4>견적요약 화면</h4><p>공종별 소계 중심으로 고객에게 보여줄 요약 화면 영역입니다.</p></div>
+    <div class="info-box"><h4>견적상세 화면</h4><p>품목별 상세 내역을 고객용 또는 내부용으로 나누어 표현할 수 있는 자리입니다.</p></div>
+    <div class="info-box"><h4>회사관리 화면</h4><p>다음 단계에서 고객용 PDF 출력, 공종별 수익, 현장 수익으로 확장합니다.</p></div>
+  </div>
+</div>
+
+<div id="tab-summary" class="hidden">
   <div class="card">
-    <div class="card-header">기본 정보</div>
-    <div class="card-body">
-      <div class="form-grid">
-        <div class="field"><label>견적번호</label><input id="quoteNo" value="Q2026-001-1차" /></div>
-        <div class="field"><label>기준견적번호</label><input id="baseQuoteNo" value="Q2026-001" /></div>
-        <div class="field"><label>차수</label><input id="seqNo" type="number" value="1" min="1" /></div>
-        <div class="field"><label>상담일/작성일</label><input id="consultDate" type="date" value="2026-04-11" /></div>
-
-        <div class="field"><label>고객명</label><input id="customerName" placeholder="고객명 입력" /></div>
-        <div class="field"><label>연락처</label><input id="phone" placeholder="연락처 입력" /></div>
-        <div class="field"><label>현장명</label><input id="siteName" placeholder="현장명 입력" /></div>
-        <div class="field"><label>현장주소</label><input id="address" placeholder="현장 주소 입력" /></div>
-
-        <div class="field"><label>공사구분</label>
-          <select id="workType">
-            <option>본공사</option>
-            <option>추가공사</option>
-            <option>전체</option>
-          </select>
-        </div>
-        <div class="field"><label>공사일정</label><input id="workDate" placeholder="예: 2026-04-20 ~ 2026-04-30" /></div>
-        <div class="field"><label>평수/면적</label><input id="areaSize" placeholder="예: 25평" /></div>
-        <div class="field"><label>견적상태</label>
-          <select id="quoteStatus">
-            <option>가견적</option>
-            <option>계약견적</option>
-          </select>
-        </div>
-
-        <div class="field"><label>VAT 방식</label>
-          <select id="vatMode">
-            <option value="10">10%</option>
-            <option value="0">0%</option>
-          </select>
-        </div>
-        <div class="field"><label>기타공사비</label><input id="otherCost" type="number" value="0" min="0" /></div>
-        <div class="field"><label>폐기물비용</label><input id="wasteCost" type="number" value="0" min="0" /></div>
-        <div class="field"><label>산재보험비</label><input id="insuranceCost" type="number" value="0" min="0" /></div>
-
-        <div class="field"><label>현장관리비</label><input id="siteMgmtCost" type="number" value="0" min="0" /></div>
-        <div class="field span-2"><label>메모</label><textarea id="memo" placeholder="메모 입력"></textarea></div>
-      </div>
-    </div>
+    <div class="card-header">견적요약</div>
+    <div class="card-body"><div class="work-summary-list" id="summaryTabList"></div></div>
   </div>
+</div>
 
+<div id="tab-detail" class="hidden">
   <div class="card">
-    <div class="card-header">합계 정보</div>
+    <div class="card-header">견적상세</div>
     <div class="card-body">
-      <div class="side-tools">
-        <button class="btn-ghost">현장 불러오기</button>
-        <button class="btn-ghost">고객 찾기</button>
-        <button class="btn-ghost">추가공사 시작</button>
-        <button class="btn-ghost">현장 통합 보기</button>
-      </div>
-
-      <div class="summary-box">
-        <div class="label">직접공사비(상세합)</div>
-        <div class="value" id="detailDirectTotalText">₩ 0</div>
-      </div>
-      <div class="summary-box">
-        <div class="label">간접비 합계</div>
-        <div class="value" id="indirectTotalText">₩ 0</div>
-      </div>
-      <div class="summary-box">
-        <div class="label">총공사비</div>
-        <div class="value" id="totalConstructionText">₩ 0</div>
-      </div>
-      <div class="summary-box">
-        <div class="label">VAT</div>
-        <div class="value" id="vatAmountText">₩ 0</div>
-      </div>
-      <div class="summary-box">
-        <div class="label">실청구액</div>
-        <div class="value" id="grandTotalText">₩ 0</div>
-      </div>
-
-      <div class="mini-title">공종별 요약</div>
-      <div class="process-list" id="processSummaryList">
-        <div class="process-item"><span>입력된 공종이 없습니다</span><span class="badge">₩ 0</span></div>
+      <div class="table-wrap">
+        <table id="detailPreviewTable" style="width:100%; border-collapse:collapse;">
+          <colgroup>
+            <col style="width:70px;"><col style="width:280px;"><col style="width:160px;"><col style="width:120px;">
+            <col style="width:120px;"><col style="width:180px;"><col style="width:auto;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>품목명</th>
+              <th>규격</th>
+              <th>단위</th>
+              <th>수량</th>
+              <th>금액</th>
+              <th>비고</th>
+            </tr>
+          </thead>
+          <tbody id="detailPreviewBody"></tbody>
+        </table>
       </div>
     </div>
   </div>
 </div>
 
-<div class="card table-card">
-  <div class="card-header">
-    <span>견적 상세 입력</span>
-    <div class="table-actions">
-      <button class="btn-light">공종선택</button>
-      <button class="btn-light">품목선택</button>
-      <button class="btn-light">단가수정</button>
-      <button class="btn-primary" id="btnAddRow">행추가</button>
-    </div>
+<div id="tab-company" class="hidden">
+  <div class="card">
+    <div class="card-header">회사관리</div>
+    <div class="card-body"><p>다음 단계에서 공종별 수익, 현장 수익 패널을 여기에 붙입니다.</p></div>
   </div>
-  <div class="card-body table-wrap">
-    <table>
-      <thead>
+</div>
+
+  </div>  <div id="loadModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">견적 불러오기</div>
+        <button class="btn-light" onclick="closeLoadModal()">닫기</button>
+      </div>
+      <div class="modal-body">
+        <div class="search-grid">
+          <input id="loadSearchInput" placeholder="고객명 / 현장명 / 현장주소 / 견적번호 일부 입력" oninput="searchQuotes()" />
+          <button class="btn-dark" onclick="searchQuotes()">검색</button>
+          <button class="btn-light" onclick="clearQuoteSearch()">초기화</button>
+        </div><div class="table-wrap">
+      <table style="min-width:960px;">
+        <thead>
+          <tr>
+            <th>견적번호</th>
+            <th>작성일</th>
+            <th>고객명</th>
+            <th>현장명</th>
+            <th>현장주소</th>
+            <th>총금액</th>
+            <th>선택</th>
+          </tr>
+        </thead>
+        <tbody id="loadSearchBody"></tbody>
+      </table>
+    </div>
+    <div id="loadSearchEmpty" class="search-result-empty hidden">검색 결과가 없습니다.</div>
+  </div>
+</div>
+
+  </div>  <div id="pdfPrintArea" class="pdf-print-area">
+    <div class="pdf-sheet pdf-cover-sheet">
+      <div class="pdf-cover-inner">
+        <div>
+          <div class="pdf-cover-title">견 적 서</div>
+          
+        </div><div class="pdf-cover-box">
+      <div class="pdf-cover-row"><span>견적번호</span><strong id="cover_quote_no">-</strong></div>
+      <div class="pdf-cover-row"><span>작성일</span><strong id="cover_quote_date">-</strong></div>
+      <div class="pdf-cover-row"><span>고객명</span><strong id="cover_customer_name">-</strong></div>
+<div class="pdf-cover-row"><span>연락처</span><strong id="cover_customer_phone">-</strong></div>
+      <div class="pdf-cover-row"><span>현장명</span><strong id="cover_site_name">-</strong></div>
+      <div class="pdf-cover-row"><span>현장주소</span><strong id="cover_site_address">-</strong></div>
+      <div class="pdf-cover-row"><span>공사구분</span><strong id="cover_work_type">-</strong></div>
+    </div>
+
+    
+
+    <div class="pdf-cover-company-box">
+  <div class="pdf-cover-company-title">회사 정보</div>
+  <div class="pdf-cover-company-row">
+    <span>상호</span>
+    <strong>AK디자인</strong>
+  </div>
+  <div class="pdf-cover-company-row">
+    <span>대표</span>
+    <strong>김민석</strong>
+  </div>
+  <div class="pdf-cover-company-row">
+    <span>전화번호</span>
+    <strong>010-3677-0454</strong>
+  </div>
+  <div class="pdf-cover-company-row">
+    <span>주소</span>
+    <strong>경기도 광명시 일직로99번안길 7 103호</strong>
+  </div>
+</div>
+  </div>
+</div>
+
+<div class="pdf-sheet pdf-summary-sheet">
+  <div class="pdf-section-title">견적요약</div>
+  <div>견적번호 : <strong id="summary_quote_no">-</strong></div>
+  <div class="pdf-meta-line">
+     <div>작성일 : <strong id="summary_quote_date">-</strong></div>
+     <div>고객명 : <strong id="summary_customer_name">-</strong></div>
+    <div>현장주소 : <strong id="summary_site_address">-</strong></div>
+    
+  </div>
+
+  <table class="pdf-summary-table">
+    <thead>
+      <tr>
+        <th>공종명</th>
+        <th>금액</th>
+      </tr>
+    </thead>
+    <tbody id="pdfSummaryBody"></tbody>
+  </table>
+
+  <div class="pdf-summary-total-wrap">
+  <table class="pdf-summary-total-table">
+  <colgroup>
+    <col style="width: 50%;">
+    <col style="width: 50%;">
+  </colgroup>
+  <tbody>
+      <tr>
+        <th>직접공사비</th>
+        <td id="pdf_direct_cost" >₩ 0</td>
+      </tr>
+      <tr>
+        <th>기타공사비</th>
+        <td id="pdf_extra_cost">₩ 0</td>
+      </tr>
+      <tr>
+        <th>폐기물비용</th>
+        <td id="pdf_waste_cost">₩ 0</td>
+      </tr>
+      <tr>
+        <th>산재보험비</th>
+        <td id="pdf_insurance_cost">₩ 0</td>
+      </tr>
+      <tr>
+        <th>현장관리비</th>
+        <td id="pdf_site_manage_cost">₩ 0</td>
+      </tr>
+      <tr>
+        <th>공급가액</th>
+        <td id="pdf_supply_amount">₩ 0</td>
+      </tr>
+      <tr>
+        <th>VAT</th>
+        <td id="pdf_vat_amount">₩ 0</td>
+      </tr>
+      <tr class="pdf-summary-total-final">
+        <th>총 합 계</th>
+        <td id="pdf_total_amount">₩ 0</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+  <div class="pdf-memo-box">
+    <div class="pdf-memo-title">비고</div>
+    <div class="pdf-memo-content" id="pdf_quote_memo">-</div>
+  </div>
+</div>
+
+<div class="pdf-sheet pdf-summary-sheet">
+  <div class="pdf-section-title">견적상세</div>
+<div><span>견적번호 : </span><strong id="pdf_quote_no">-</strong></div>
+  <div class="pdf-meta-line">
+
+    <div>작성일 : <strong id="pdf_quote_date">-</strong></div>
+    <div>고객명 : <strong id="pdf_customer_name">-</strong></div>
+    <div>현장주소: <strong id="pdf_site_address">-</strong></div>
+  </div>
+
+
+ <div class="pdf-table-wrap">
+    <table class="pdf-table">
+     <thead>
         <tr>
-          <th style="width:70px;">No</th>
-          <th style="width:140px;">공종명</th>
-          <th style="width:120px;">품목코드</th>
-          <th style="width:180px;">품목명</th>
-          <th style="width:140px;">규격</th>
-          <th style="width:90px;">단위</th>
-          <th style="width:90px;">수량</th>
-          <th style="width:110px;">자재비</th>
-          <th style="width:110px;">노무비</th>
-          <th style="width:110px;">경비</th>
-          <th style="width:110px;">판매단가</th>
-          <th style="width:120px;">금액</th>
-          <th style="width:160px;">비고</th>
-          <th style="width:90px;">삭제</th>
+          <th style="width:6%;">No</th>
+          <th style="width:25%;">품목명</th>
+          <th style="width:8%;">규격</th>
+          <th style="width:8%;">단위</th>
+          <th style="width:14%;">수량</th>
+          <th style="width:14%;">금액</th>
+          <th style="width:27%;">비고</th>
         </tr>
       </thead>
-      <tbody id="quoteItemsBody"></tbody>
+      <tbody id="pdfDetailBody"></tbody>
     </table>
-    <div class="table-hint">마지막 행에 공종, 품목, 수량, 단가 중 하나라도 입력하면 다음 빈 행이 자동으로 추가됩니다.</div>
-  </div>
 </div>
-
-<div class="footer-panels">
-  <div class="panel">
-    <h3>견적요약 화면</h3>
-    <p>공종별 소계 중심으로 고객에게 보여줄 요약 화면 영역입니다. 다음 단계에서 실제 출력 형태로 정리하면 됩니다.</p>
   </div>
-  <div class="panel">
-    <h3>견적상세 화면</h3>
-    <p>품목별 상세 내역을 고객용 또는 내부용으로 나누어 표현할 수 있는 자리입니다. 공종명 묶음, 소계, 기타공사 영역도 여기에 맞춰 붙이면 됩니다.</p>
-  </div>
-  <div class="panel">
-    <h3>회사관리 화면</h3>
-    <p>수금 입력, 현장 수익, 공종별 수익, 원가 분석으로 이어질 내부 관리 화면입니다. 입력/저장 흐름을 먼저 고정한 뒤 연결하는 것이 맞습니다.</p>
-  </div>
-</div>
 
-  </div>  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  <script>
-    // =============================
-    // 0) Supabase 설정
-    // =============================
-    const SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const tbody = document.getElementById('quoteItemsBody');
-    const btnAddRow = document.getElementById('btnAddRow');
-    const btnSave = document.getElementById('btnSave');
+  </div>  <script>
+    const SUPABASE_URL = "https://rzbqiytumnwvjlmbljbp.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_G7L9_UDamWpmHL6r1pnqLg_7_FLUg4G";
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const processOptions = ['', '철거', '목공', '타일', '도장', '전기', '설비', '필름', '유리'];
+    let detailRows = [];
+    let customersCache = [];
+    let sitesCache = [];
+    let workTypesCache = [];
+    let materialsCache = [];
+    let autoAppendGuard = false;
+    let quoteSearchCache = [];
 
-    function n(v) {
-      const x = Number(String(v ?? '').replace(/,/g, '').trim());
-      return Number.isFinite(x) ? x : 0;
+    const WORK_DISPLAY_ORDER = [
+      "철거", "설비", "전기조명", "목공사", "타일", "욕실", "필름", "도장",
+      "바닥", "도배", "도어", "가구싱크대", "샷시", "실리콘", "확장공사", "외부공사"
+    ];
+
+    function todayStr() {
+      return new Date().toISOString().substring(0, 10);
     }
 
-    function won(v) {
-      return '₩ ' + n(v).toLocaleString('ko-KR');
+    function newQuoteNo() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mi = String(d.getMinutes()).padStart(2, "0");
+      const ss = String(d.getSeconds()).padStart(2, "0");
+      return `Q${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
     }
 
-    function rowHtml(index, data = {}) {
-      const processSelect = processOptions.map(p => `<option value="${p}" ${data.process_name === p ? 'selected' : ''}>${p}</option>`).join('');
-      return `
+    function formatWon(num) {
+      return "₩ " + Number(num || 0).toLocaleString("ko-KR");
+    }
+
+    function toNum(v) {
+      return Number(String(v ?? "").replace(/,/g, "").trim()) || 0;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function normalizeWorkName(name) {
+      return String(name || "").replace(/\s+/g, "").trim();
+    }
+
+    function getWorkOrderIndex(name) {
+      const normalized = normalizeWorkName(name);
+      const idx = WORK_DISPLAY_ORDER.findIndex(x => normalizeWorkName(x) === normalized);
+      return idx === -1 ? 9999 : idx;
+    }
+
+    function showTab(tabName) {
+      document.getElementById("tab-write").classList.add("hidden");
+      document.getElementById("tab-summary").classList.add("hidden");
+      document.getElementById("tab-detail").classList.add("hidden");
+      document.getElementById("tab-company").classList.add("hidden");
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+
+      if (tabName === "write") {
+        document.getElementById("tab-write").classList.remove("hidden");
+        document.querySelectorAll(".tab-btn")[0].classList.add("active");
+      } else if (tabName === "summary") {
+        document.getElementById("tab-summary").classList.remove("hidden");
+        document.querySelectorAll(".tab-btn")[1].classList.add("active");
+      } else if (tabName === "detail") {
+        document.getElementById("tab-detail").classList.remove("hidden");
+        document.querySelectorAll(".tab-btn")[2].classList.add("active");
+      } else if (tabName === "company") {
+        document.getElementById("tab-company").classList.remove("hidden");
+        document.querySelectorAll(".tab-btn")[3].classList.add("active");
+      }
+    }
+
+    function buildEmptyRow() {
+      return {
+        id: crypto.randomUUID(),
+        work_type_id: "",
+        material_id: "",
+        work_name: "",
+        item_name: "",
+        spec: "",
+        unit: "",
+        qty: 0,
+        cost_material: 0,
+        cost_labor: 0,
+        cost_expense: 0,
+        unit_price: 0,
+        line_amount: 0,
+        note: ""
+      };
+    }
+
+    function isMeaningfulRow(row) {
+      return !!(
+        String(row.work_name || "").trim() ||
+        String(row.item_name || "").trim() ||
+        String(row.spec || "").trim() ||
+        String(row.unit || "").trim() ||
+        toNum(row.qty) > 0 ||
+        toNum(row.cost_material) > 0 ||
+        toNum(row.cost_labor) > 0 ||
+        toNum(row.cost_expense) > 0 ||
+        String(row.note || "").trim()
+      );
+    }
+
+    function updateComputedAmounts(row) {
+      const qty = toNum(row.qty);
+      const costMaterial = toNum(row.cost_material);
+      const costLabor = toNum(row.cost_labor);
+      const costExpense = toNum(row.cost_expense);
+
+      row.qty = qty;
+      row.cost_material = costMaterial;
+      row.cost_labor = costLabor;
+      row.cost_expense = costExpense;
+      row.unit_price = costMaterial + costLabor + costExpense;
+      row.line_amount = qty * row.unit_price;
+    }
+
+    function maybeAutoAppendRow(currentRowId) {
+      if (autoAppendGuard) return;
+      const lastRow = detailRows[detailRows.length - 1];
+      if (!lastRow) return;
+      if (lastRow.id !== currentRowId) return;
+      if (!isMeaningfulRow(lastRow)) return;
+
+      autoAppendGuard = true;
+      detailRows.push(buildEmptyRow());
+      renderDetailRows();
+      calculateAll();
+      autoAppendGuard = false;
+    }
+
+    function addQuoteRow() {
+      detailRows.push(buildEmptyRow());
+      renderDetailRows();
+      calculateAll();
+    }
+
+    function removeQuoteRow(id) {
+      detailRows = detailRows.filter(r => r.id !== id);
+      if (detailRows.length === 0) detailRows.push(buildEmptyRow());
+      renderDetailRows();
+      calculateAll();
+    }
+
+    function updateRowValue(id, key, value) {
+      const row = detailRows.find(r => r.id === id);
+      if (!row) return;
+
+      if (["qty", "cost_material", "cost_labor", "cost_expense"].includes(key)) {
+        row[key] = toNum(value);
+      } else {
+        row[key] = value;
+      }
+
+      updateComputedAmounts(row);
+      const amountEl = document.getElementById(`line_amount_${row.id}`);
+      if (amountEl) amountEl.textContent = formatWon(row.line_amount);
+
+      renderPreviewTables();
+      calculateAll();
+    }
+
+    function handleWorkTypeChange(id, workTypeId) {
+      const row = detailRows.find(r => r.id === id);
+      if (!row) return;
+
+      row.work_type_id = workTypeId;
+      const wt = workTypesCache.find(x => String(x.id) === String(workTypeId));
+      row.work_name = wt ? wt.work_name : row.work_name;
+
+      renderDetailRows();
+      calculateAll();
+      maybeAutoAppendRow(id);
+    }
+
+    function handleMaterialChange(id, materialId) {
+      const row = detailRows.find(r => r.id === id);
+      if (!row) return;
+
+      row.material_id = materialId;
+      const material = materialsCache.find(x => String(x.id) === String(materialId));
+
+      if (!material) {
+        renderDetailRows();
+        calculateAll();
+        maybeAutoAppendRow(id);
+        return;
+      }
+
+      row.item_name = material.item_name || row.item_name;
+      row.spec = material.spec || row.spec;
+      row.unit = material.unit || row.unit;
+      row.cost_material = toNum(material.cost_material);
+      row.cost_labor = toNum(material.cost_labor);
+      row.cost_expense = toNum(material.cost_expense);
+
+      if (!row.work_type_id && material.work_type_id) {
+        row.work_type_id = material.work_type_id;
+        const wt = workTypesCache.find(x => String(x.id) === String(material.work_type_id));
+        row.work_name = wt ? wt.work_name : row.work_name;
+      }
+
+      updateComputedAmounts(row);
+      renderDetailRows();
+      calculateAll();
+      maybeAutoAppendRow(id);
+    }
+
+    function makeWorkTypeOptions(selectedId) {
+      let html = `<option value="">공종 선택</option>`;
+      workTypesCache.forEach(w => {
+        html += `<option value="${w.id}" ${String(selectedId) === String(w.id) ? "selected" : ""}>${escapeHtml(w.work_name)}</option>`;
+      });
+      return html;
+    }
+
+    function makeMaterialOptions(selectedId, rowWorkTypeId) {
+      let html = `<option value="">품목 선택</option>`;
+      let list = materialsCache;
+      if (rowWorkTypeId) {
+        list = list.filter(m => String(m.work_type_id ?? "") === String(rowWorkTypeId));
+      }
+      list.forEach(m => {
+        html += `<option value="${m.id}" ${String(selectedId) === String(m.id) ? "selected" : ""}>${escapeHtml(m.item_name)}</option>`;
+      });
+      return html;
+    }
+
+    function renderDetailRows() {
+      const body = document.getElementById("quoteDetailBody");
+      body.innerHTML = "";
+
+      detailRows.forEach((row, idx) => {
+        updateComputedAmounts(row);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="row-no">${idx + 1}</td>
+          <td>
+            <select onchange="handleWorkTypeChange('${row.id}', this.value)">
+              ${makeWorkTypeOptions(row.work_type_id)}
+            </select>
+          </td>
+          <td>
+            <select onchange="handleMaterialChange('${row.id}', this.value)">
+              ${makeMaterialOptions(row.material_id, row.work_type_id)}
+            </select>
+          </td>
+          <td><input value="${escapeHtml(row.work_name)}" onchange="updateRowValue('${row.id}','work_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="공종명" /></td>
+          <td><input value="${escapeHtml(row.item_name)}" onchange="updateRowValue('${row.id}','item_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="품목명" /></td>
+          <td><input value="${escapeHtml(row.spec)}" onchange="updateRowValue('${row.id}','spec',this.value); maybeAutoAppendRow('${row.id}');" placeholder="규격" /></td>
+          <td><input type="text" value="${escapeHtml(row.unit)}" onchange="updateRowValue('${row.id}','unit',this.value); maybeAutoAppendRow('${row.id}');" placeholder="단위" /></td>
+          <td><input type="number" value="${row.qty}" oninput="updateRowValue('${row.id}','qty',this.value)" /></td>
+          <td><input type="number" value="${row.cost_material}" oninput="updateRowValue('${row.id}','cost_material',this.value)" /></td>
+          <td><input type="number" value="${row.cost_labor}" oninput="updateRowValue('${row.id}','cost_labor',this.value)" /></td>
+          <td><input type="number" value="${row.cost_expense}" oninput="updateRowValue('${row.id}','cost_expense',this.value)" /></td>
+          <td class="align-right" style="min-width:140px;"><strong id="line_amount_${row.id}">${formatWon(row.line_amount)}</strong></td>
+          <td><textarea onchange="updateRowValue('${row.id}','note',this.value)" placeholder="비고">${escapeHtml(row.note)}</textarea></td><td><button class="table-btn delete-btn" onclick="removeQuoteRow('${row.id}')">삭제</button></td>
+    `;
+    body.appendChild(tr);
+  });
+
+  renderPreviewTables();
+}
+
+function renderPreviewTables() {
+  const previewBody = document.getElementById("detailPreviewBody");
+  previewBody.innerHTML = "";
+
+  const meaningfulRows = detailRows.filter(isMeaningfulRow).map(row => {
+    updateComputedAmounts(row);
+    return row;
+  });
+
+  if (meaningfulRows.length === 0) {
+    previewBody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align:center;">입력된 견적상세가 없습니다.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  const groupedMap = new Map();
+  meaningfulRows.forEach(row => {
+    const workName = String(row.work_name || "미분류").trim() || "미분류";
+    if (!groupedMap.has(workName)) groupedMap.set(workName, []);
+    groupedMap.get(workName).push(row);
+  });
+
+  const groupedEntries = Array.from(groupedMap.entries()).sort((a, b) => {
+    const orderA = getWorkOrderIndex(a[0]);
+    const orderB = getWorkOrderIndex(b[0]);
+    if (orderA !== orderB) return orderA - orderB;
+    return a[0].localeCompare(b[0], "ko");
+  });
+
+  groupedEntries.forEach(([workName, rows]) => {
+    let subtotal = 0;
+
+    previewBody.insertAdjacentHTML(
+      "beforeend",
+      `
+      <tr class="preview-group-row">
+        <td colspan="7">${escapeHtml(workName)}</td>
+      </tr>
+      `
+    );
+
+    rows.forEach((row, idx) => {
+      subtotal += toNum(row.line_amount);
+      previewBody.insertAdjacentHTML(
+        "beforeend",
+        `
         <tr>
-          <td><input class="line-no" value="${index}" readonly /></td>
-          <td><select class="process-name">${processSelect}</select></td>
-          <td><input class="item-code" value="${data.item_code ?? ''}" /></td>
-          <td><input class="item-name" value="${data.item_name ?? ''}" /></td>
-          <td><input class="spec" value="${data.spec ?? ''}" /></td>
-          <td><input class="unit" value="${data.unit ?? ''}" /></td>
-          <td><input class="qty" type="number" min="0" step="0.01" value="${data.qty ?? ''}" /></td>
-          <td><input class="material-cost" type="number" min="0" step="0.01" value="${data.material_cost ?? ''}" /></td>
-          <td><input class="labor-cost" type="number" min="0" step="0.01" value="${data.labor_cost ?? ''}" /></td>
-          <td><input class="expense-cost" type="number" min="0" step="0.01" value="${data.expense_cost ?? ''}" /></td>
-          <td><input class="sell-price" value="" readonly /></td>
-          <td class="amount amount-cell"></td>
-          <td><input class="note" value="${data.note ?? ''}" /></td>
-          <td><button class="delete-btn" type="button">삭제</button></td>
+          <td class="align-center">${idx + 1}</td>
+          <td class="align-center">${escapeHtml(row.item_name || "-")}</td>
+          <td class="align-center">${escapeHtml(row.spec || "-")}</td>
+          <td class="align-center">${escapeHtml(row.unit || "-")}</td>
+          <td class="align-right">${toNum(row.qty).toLocaleString("ko-KR")}</td>
+          <td class="align-right">${formatWon(row.line_amount)}</td>
+          <td>${escapeHtml(row.note || "")}</td>
         </tr>
-      `;
-    }
-
-    function addRow(data = {}) {
-      tbody.insertAdjacentHTML('beforeend', rowHtml(tbody.querySelectorAll('tr').length + 1, data));
-      bindRowEvents(tbody.lastElementChild);
-      recalcAll();
-    }
-
-    function renumberRows() {
-      [...tbody.querySelectorAll('tr')].forEach((tr, i) => {
-        tr.querySelector('.line-no').value = i + 1;
-      });
-    }
-
-    function getRowData(tr) {
-      const qty = n(tr.querySelector('.qty').value);
-      const material = n(tr.querySelector('.material-cost').value);
-      const labor = n(tr.querySelector('.labor-cost').value);
-      const expense = n(tr.querySelector('.expense-cost').value);
-      const sellPrice = material + labor + expense;
-      const amount = qty > 0 && sellPrice > 0 ? qty * sellPrice : 0;
-
-      tr.querySelector('.sell-price').value = sellPrice ? sellPrice.toLocaleString('ko-KR') : '';
-      tr.querySelector('.amount-cell').textContent = amount ? amount.toLocaleString('ko-KR') : '';
-
-      return {
-        line_no: n(tr.querySelector('.line-no').value),
-        process_name: tr.querySelector('.process-name').value.trim(),
-        item_code: tr.querySelector('.item-code').value.trim(),
-        item_name: tr.querySelector('.item-name').value.trim(),
-        spec: tr.querySelector('.spec').value.trim(),
-        unit: tr.querySelector('.unit').value.trim(),
-        qty,
-        material_cost: material,
-        labor_cost: labor,
-        expense_cost: expense,
-        sell_price: sellPrice,
-        amount,
-        note: tr.querySelector('.note').value.trim(),
-      };
-    }
-
-    function isMeaningfulRow(data) {
-      return !!(data.process_name || data.item_code || data.item_name || data.spec || data.unit || data.qty || data.material_cost || data.labor_cost || data.expense_cost || data.note);
-    }
-
-    function ensureTrailingEmptyRow() {
-      const rows = [...tbody.querySelectorAll('tr')];
-      if (!rows.length) {
-        addRow();
-        return;
-      }
-      const lastData = getRowData(rows[rows.length - 1]);
-      if (isMeaningfulRow(lastData)) addRow();
-    }
-
-    function recalcAll() {
-      const rowDatas = [...tbody.querySelectorAll('tr')].map(getRowData);
-      const activeRows = rowDatas.filter(isMeaningfulRow);
-
-      const detailDirectTotal = activeRows.reduce((s, r) => s + n(r.amount), 0);
-      const indirectTotal = n(document.getElementById('otherCost').value) + n(document.getElementById('wasteCost').value) + n(document.getElementById('insuranceCost').value) + n(document.getElementById('siteMgmtCost').value);
-      const totalConstruction = detailDirectTotal + indirectTotal;
-      const vatRate = document.getElementById('vatMode').value === '10' ? 0.1 : 0;
-      const vatAmount = Math.round(totalConstruction * vatRate);
-      const grandTotal = totalConstruction + vatAmount;
-
-      document.getElementById('detailDirectTotalText').textContent = won(detailDirectTotal);
-      document.getElementById('indirectTotalText').textContent = won(indirectTotal);
-      document.getElementById('totalConstructionText').textContent = won(totalConstruction);
-      document.getElementById('vatAmountText').textContent = won(vatAmount);
-      document.getElementById('grandTotalText').textContent = won(grandTotal);
-
-      document.getElementById('qConsultDateText').textContent = document.getElementById('consultDate').value || '미입력';
-      document.getElementById('qCustomerNameText').textContent = document.getElementById('customerName').value.trim() || '미입력';
-      document.getElementById('qSiteNameText').textContent = document.getElementById('siteName').value.trim() || '미입력';
-      document.getElementById('qWorkTypeText').textContent = document.getElementById('workType').value || '미입력';
-      document.getElementById('qSeqText').textContent = `${n(document.getElementById('seqNo').value) || 1}차`;
-      document.getElementById('qStatusText').textContent = document.getElementById('quoteStatus').value || '미입력';
-
-      renderProcessSummary(activeRows);
-      return { activeRows, detailDirectTotal, indirectTotal, totalConstruction, vatAmount, grandTotal, vatRate };
-    }
-
-    function renderProcessSummary(rows) {
-      const map = new Map();
-      rows.forEach(r => {
-        if (!r.process_name || !r.amount) return;
-        map.set(r.process_name, (map.get(r.process_name) || 0) + r.amount);
-      });
-      const list = document.getElementById('processSummaryList');
-      if (map.size === 0) {
-        list.innerHTML = '<div class="process-item"><span>입력된 공종이 없습니다</span><span class="badge">₩ 0</span></div>';
-        return;
-      }
-      list.innerHTML = [...map.entries()].map(([name, amount]) => `
-        <div class="process-item"><span>${name}</span><span class="badge">${won(amount)}</span></div>
-      `).join('');
-    }
-
-    function bindRowEvents(tr) {
-      tr.querySelectorAll('input, select').forEach(el => {
-        el.addEventListener('input', () => {
-          recalcAll();
-          ensureTrailingEmptyRow();
-        });
-        el.addEventListener('change', () => {
-          recalcAll();
-          ensureTrailingEmptyRow();
-        });
-      });
-
-      tr.querySelector('.delete-btn').addEventListener('click', () => {
-        const rows = tbody.querySelectorAll('tr');
-        if (rows.length <= 1) {
-          tr.querySelectorAll('input').forEach(inp => {
-            if (!inp.classList.contains('line-no') && !inp.classList.contains('sell-price')) inp.value = '';
-          });
-          tr.querySelectorAll('select').forEach(sel => sel.selectedIndex = 0);
-          tr.querySelector('.amount-cell').textContent = '';
-        } else {
-          tr.remove();
-          renumberRows();
-        }
-        recalcAll();
-        ensureTrailingEmptyRow();
-      });
-    }
-
-    function getPayload() {
-      const calc = recalcAll();
-      const items = calc.activeRows.map((r, idx) => ({
-        line_no: idx + 1,
-        process_name: r.process_name,
-        item_code: r.item_code,
-        item_name: r.item_name || '',
-        spec: r.spec,
-        unit: r.unit,
-        qty: r.qty,
-        material_cost: r.material_cost,
-        labor_cost: r.labor_cost,
-        expense_cost: r.expense_cost,
-        sell_price: r.sell_price,
-        amount: r.amount,
-        note: r.note
-      }));
-
-      return {
-        quote: {
-          quote_no: document.getElementById('quoteNo').value.trim(),
-          base_quote_no: document.getElementById('baseQuoteNo').value.trim(),
-          seq_no: n(document.getElementById('seqNo').value) || 1,
-          is_latest: true,
-          consult_date: document.getElementById('consultDate').value || null,
-          customer_name: document.getElementById('customerName').value.trim(),
-          phone: document.getElementById('phone').value.trim(),
-          address: document.getElementById('address').value.trim(),
-          site_name: document.getElementById('siteName').value.trim(),
-          work_type: document.getElementById('workType').value,
-          work_date: document.getElementById('workDate').value.trim(),
-          area_size: document.getElementById('areaSize').value.trim(),
-          quote_status: document.getElementById('quoteStatus').value,
-          vat_mode: document.getElementById('vatMode').value,
-          vat_rate: calc.vatRate,
-          other_cost: n(document.getElementById('otherCost').value),
-          waste_cost: n(document.getElementById('wasteCost').value),
-          insurance_cost: n(document.getElementById('insuranceCost').value),
-          site_mgmt_cost: n(document.getElementById('siteMgmtCost').value),
-          detail_direct_total: calc.detailDirectTotal,
-          indirect_total: calc.indirectTotal,
-          total_construction_total: calc.totalConstruction,
-          vat_amount: calc.vatAmount,
-          grand_total: calc.grandTotal,
-          memo: document.getElementById('memo').value.trim()
-        },
-        items
-      };
-    }
-
-    async function getOrCreateCustomer(quote) {
-      const customerName = quote.customer_name;
-      const phone = quote.phone || '';
-      const address = quote.address || '';
-      const memo = quote.memo || '';
-
-      let query = supabase
-        .from('customers')
-        .select('id, customer_name, phone, address')
-        .eq('customer_name', customerName)
-        .limit(1);
-
-      if (콜) query = query.eq('phone', phone);
-
-      const { data: foundRows, error: findError } = await query;
-      if (findError) throw findError;
-
-      if (foundRows && foundRows.length > 0) {
-        const existing = foundRows[0];
-        const { error: updateError } = await supabase
-          .from('customers')
-          .update({
-            phone,
-            address,
-            memo
-          })
-          .eq('id', existing.id);
-        if (updateError) throw updateError;
-        return existing.id;
-      }
-
-      const { data: inserted, error: insertError } = await supabase
-        .from('customers')
-        .insert({
-          customer_name: customerName,
-          phone,
-          address,
-          memo
-        })
-        .select('id')
-        .single();
-
-      if (insertError) throw insertError;
-      return inserted.id;
-    }
-
-    async function getOrCreateSite(customerId, quote) {
-      const siteName = quote.site_name || '';
-      const address = quote.address || '';
-      const memo = quote.memo || '';
-
-      if (!siteName) return null;
-
-      let query = supabase
-        .from('sites')
-        .select('id, customer_id, site_name')
-        .eq('site_name', siteName)
-        .limit(1);
-
-      if (customerId) query = query.eq('customer_id', customerId);
-
-      const { data: foundRows, error: findError } = await query;
-      if (findError) throw findError;
-
-      if (foundRows && foundRows.length > 0) {
-        const existing = foundRows[0];
-        const { error: updateError } = await supabase
-          .from('sites')
-          .update({
-            customer_id: customerId,
-            address,
-            memo
-          })
-          .eq('id', existing.id);
-        if (updateError) throw updateError;
-        return existing.id;
-      }
-
-      const { data: inserted, error: insertError } = await supabase
-        .from('sites')
-        .insert({
-          customer_id: customerId,
-          site_name: siteName,
-          address,
-          memo
-        })
-        .select('id')
-        .single();
-
-      if (insertError) throw insertError;
-      return inserted.id;
-    }
-
-    async function resolveMaterialId(itemCode) {
-      if (!itemCode) return null;
-      const { data, error } = await supabase
-        .from('materials')
-        .select('id')
-        .eq('item_code', itemCode)
-        .limit(1);
-      if (error) throw error;
-      return data && data.length ? data[0].id : null;
-    }
-
-    async function saveQuoteToSupabase() {
-      const payload = getPayload();
-
-      if (!payload.quote.quote_no) return alert('견적번호가 필요합니다.');
-      if (!payload.quote.base_quote_no) return alert('기준견적번호가 필요합니다.');
-      if (!payload.quote.customer_name) return alert('고객명은 필수입니다.');
-      if (!payload.items.length) return alert('견적 상세를 1줄 이상 입력해야 합니다.');
-      if (!SUPABASE_URL.includes('supabase.co') || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
-        return alert('Supabase URL / ANON KEY를 먼저 입력하세요.');
-      }
-
-      try {
-        btnSave.disabled = true;
-        btnSave.textContent = '저장중...';
-
-        const customerId = await getOrCreateCustomer(payload.quote);
-        const siteId = await getOrCreateSite(customerId, payload.quote);
-
-        payload.quote.customer_id = customerId;
-        payload.quote.site_id = siteId;
-
-        const { error: latestOffError } = await supabase
-          .from('quotes')
-          .update({ is_latest: false })
-          .eq('base_quote_no', payload.quote.base_quote_no)
-          .eq('is_latest', true);
-        if (latestOffError) throw latestOffError;
-
-        const { data: quoteRow, error: quoteError } = await supabase
-          .from('quotes')
-          .insert(payload.quote)
-          .select('id')
-          .single();
-        if (quoteError) throw quoteError;
-
-        const quoteId = quoteRow.id;
-        const itemRows = [];
-
-        for (const item of payload.items) {
-          const materialId = await resolveMaterialId(item.item_code);
-          itemRows.push({
-            quote_id: quoteId,
-            line_no: item.line_no,
-            material_id: materialId,
-            process_name: item.process_name,
-            item_code: item.item_code,
-            item_name: item.item_name,
-            spec: item.spec,
-            unit: item.unit,
-            qty: item.qty,
-            material_cost: item.material_cost,
-            labor_cost: item.labor_cost,
-            expense_cost: item.expense_cost,
-            sell_price: item.sell_price,
-            amount: item.amount,
-            note: item.note
-          });
-        }
-
-        if (itemRows.length > 0) {
-          const { error: itemsError } = await supabase
-            .from('quote_items')
-            .insert(itemRows);
-          if (itemsError) throw itemsError;
-        }
-
-        alert(`Supabase 저장 완료
-견적 ID: ${quoteId}`);
-      } catch (err) {
-        console.error(err);
-        alert('Supabase 저장 오류: ' + (err.message || JSON.stringify(err)));
-      } finally {
-        btnSave.disabled = false;
-        btnSave.textContent = '저장';
-      }
-    }
-
-    ['consultDate','customerName','siteName','workType','seqNo','quoteStatus','otherCost','wasteCost','insuranceCost','siteMgmtCost','vatMode','phone','address','memo'].forEach(id => {
-      document.getElementById(id).addEventListener('input', recalcAll);
-      document.getElementById(id).addEventListener('change', recalcAll);
+        `
+      );
     });
 
-    btnAddRow.addEventListener('click', () => addRow());
-    btnSave.addEventListener('click', saveQuoteToSupabase);
+    previewBody.insertAdjacentHTML(
+      "beforeend",
+      `
+      <tr class="preview-subtotal-row">
+        <td colspan="5" class="align-right">${escapeHtml(workName)} 소계</td>
+        <td class="align-right">${formatWon(subtotal)}</td>
+        <td></td>
+      </tr>
+      `
+    );
+  });
+}
 
-    addRow({ process_name: '철거', item_code: 'M-001', item_name: '석고보드 철거', spec: '9.5T', unit: '㎡', qty: 30, material_cost: 15000, labor_cost: 10000, expense_cost: 2000 });
-    addRow({ process_name: '목공', item_code: 'M-002', item_name: '천장 텍스', spec: '600x600', unit: '장', qty: 120, material_cost: 4200, labor_cost: 1800, expense_cost: 150 });
-    addRow();
-    recalcAll();
-  </script></body>
+function calculateAll() {
+  let directCost = 0;
+  let workSummary = {};
+
+  detailRows.forEach(row => {
+    updateComputedAmounts(row);
+    const line = toNum(row.line_amount);
+    directCost += line;
+
+    const workName = row.work_name || "미분류";
+    if (!workSummary[workName]) workSummary[workName] = 0;
+    workSummary[workName] += line;
+  });
+
+  const extraCost = toNum(document.getElementById("extra_cost").value);
+  const wasteCost = toNum(document.getElementById("waste_cost").value);
+  const insuranceCost = toNum(document.getElementById("insurance_cost").value);
+  const siteManageCost = toNum(document.getElementById("site_manage_cost").value);
+  const vatType = toNum(document.getElementById("vat_type").value);
+
+  const indirectCost = extraCost + wasteCost + insuranceCost + siteManageCost;
+  const supplyAmount = directCost + indirectCost;
+  const vatAmount = Math.round(supplyAmount * (vatType / 100));
+  const totalAmount = supplyAmount + vatAmount;
+
+  document.getElementById("direct_cost_display").textContent = formatWon(directCost);
+  document.getElementById("indirect_cost_display").textContent = formatWon(indirectCost);
+  document.getElementById("supply_amount_display").textContent = formatWon(supplyAmount);
+  document.getElementById("vat_amount_display").textContent = formatWon(vatAmount);
+  document.getElementById("total_amount_display").textContent = formatWon(totalAmount);
+
+  const workSummaryList = document.getElementById("workSummaryList");
+  const summaryTabList = document.getElementById("summaryTabList");
+  workSummaryList.innerHTML = "";
+  summaryTabList.innerHTML = "";
+
+  const keys = Object.keys(workSummary).filter(k => workSummary[k] !== 0);
+  if (keys.length === 0) {
+    const emptyHtml = `<div class="work-summary-item"><span>입력된 공종이 없습니다</span><strong>₩ 0</strong></div>`;
+    workSummaryList.innerHTML = emptyHtml;
+    summaryTabList.innerHTML = emptyHtml;
+  } else {
+    keys.forEach(key => {
+      const html = `<div class="work-summary-item"><span>${escapeHtml(key)}</span><strong>${formatWon(workSummary[key])}</strong></div>`;
+      workSummaryList.insertAdjacentHTML("beforeend", html);
+      summaryTabList.insertAdjacentHTML("beforeend", html);
+    });
+  }
+}
+
+function syncTopSummary() {
+  document.getElementById("topWriteDate").textContent = document.getElementById("quote_date").value || "미입력";
+  document.getElementById("topCustomerName").textContent = document.getElementById("customer_name").value || "미입력";
+  document.getElementById("topSiteName").textContent = document.getElementById("site_name").value || "미입력";
+  document.getElementById("topWorkType").textContent = document.getElementById("work_type").value || "미입력";
+  document.getElementById("topRevision").textContent = (document.getElementById("revision_no").value || "1") + "차";
+  document.getElementById("topQuoteStatus").textContent = document.getElementById("quote_status").value || "미입력";
+}
+
+function bindBasicEvents() {
+  [
+    "quote_date", "customer_name", "site_name", "work_type",
+    "revision_no", "quote_status", "extra_cost", "waste_cost",
+    "insurance_cost", "site_manage_cost", "vat_type"
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener("input", () => { syncTopSummary(); calculateAll(); });
+    el.addEventListener("change", () => { syncTopSummary(); calculateAll(); });
+  });
+}
+
+function getCurrentAmounts() {
+  let directCost = 0;
+  detailRows.forEach(row => {
+    updateComputedAmounts(row);
+    directCost += toNum(row.line_amount);
+  });
+
+  const extraCost = toNum(document.getElementById("extra_cost").value);
+  const wasteCost = toNum(document.getElementById("waste_cost").value);
+  const insuranceCost = toNum(document.getElementById("insurance_cost").value);
+  const siteManageCost = toNum(document.getElementById("site_manage_cost").value);
+  const vatType = toNum(document.getElementById("vat_type").value);
+
+  const indirectCost = extraCost + wasteCost + insuranceCost + siteManageCost;
+  const supplyAmount = directCost + indirectCost;
+  const vatAmount = Math.round(supplyAmount * (vatType / 100));
+  const totalAmount = supplyAmount + vatAmount;
+
+  return { supplyAmount, vatAmount, totalAmount };
+}
+
+async function loadCustomers() {
+  try {
+    const { data, error } = await db.from("customers").select("*").order("customer_name", { ascending: true });
+    if (error) throw error;
+    customersCache = data || [];
+    const sel = document.getElementById("customer_select");
+    const current = sel.value;
+    sel.innerHTML = `<option value="">고객 선택</option>`;
+    customersCache.forEach(c => {
+      sel.innerHTML += `<option value="${c.id}">${escapeHtml(c.customer_name)}</option>`;
+    });
+    if (current) sel.value = current;
+  } catch (err) {
+    alert("고객 불러오기 실패: " + err.message);
+  }
+}
+
+async function loadSites() {
+  try {
+    const { data, error } = await db.from("sites").select("*").order("site_address", { ascending: true });
+    if (error) throw error;
+    sitesCache = data || [];
+    const sel = document.getElementById("site_select");
+    const current = sel.value;
+    sel.innerHTML = `<option value="">현장 선택</option>`;
+    sitesCache.forEach(s => {
+      const label = `${s.site_name || "현장명없음"} / ${s.site_address || ""}`;
+      sel.innerHTML += `<option value="${s.id}">${escapeHtml(label)}</option>`;
+    });
+    if (current) sel.value = current;
+  } catch (err) {
+    alert("현장 불러오기 실패: " + err.message);
+  }
+}
+
+async function loadWorkTypes() {
+  try {
+    const { data, error } = await db.from("work_types").select("*").eq("is_active", true).order("sort_no", { ascending: true });
+    if (error) throw error;
+    workTypesCache = data || [];
+    renderDetailRows();
+  } catch (err) {
+    alert("공종 불러오기 실패: " + err.message);
+  }
+}
+
+async function loadMaterials() {
+  try {
+    const { data, error } = await db.from("materials").select("*").eq("is_active", true).order("item_name", { ascending: true });
+    if (error) throw error;
+    materialsCache = data || [];
+    renderDetailRows();
+  } catch (err) {
+    alert("품목 불러오기 실패: " + err.message);
+  }
+}
+
+function handleCustomerSelectChange() {
+  const id = document.getElementById("customer_select").value;
+  const customer = customersCache.find(c => String(c.id) === String(id));
+  if (!customer) return;
+
+  document.getElementById("customer_name").value = customer.customer_name || "";
+  document.getElementById("customer_phone").value = customer.phone || "";
+  document.getElementById("customer_address").value = customer.address || "";
+  syncTopSummary();
+
+  const firstSite = sitesCache.find(s => String(s.customer_id ?? "") === String(customer.id));
+  if (firstSite) {
+    document.getElementById("site_select").value = firstSite.id;
+    handleSiteSelectChange();
+  }
+}
+
+function handleSiteSelectChange() {
+  const id = document.getElementById("site_select").value;
+  const site = sitesCache.find(s => String(s.id) === String(id));
+  if (!site) return;
+
+  document.getElementById("site_name").value = site.site_name || "";
+  document.getElementById("site_address").value = site.site_address || "";
+  document.getElementById("area_size").value = site.area_size || "";
+  if (site.work_type) document.getElementById("work_type").value = site.work_type;
+
+  if (site.customer_id) {
+    const customer = customersCache.find(c => String(c.id) === String(site.customer_id));
+    if (customer) {
+      document.getElementById("customer_select").value = customer.id;
+      document.getElementById("customer_name").value = customer.customer_name || "";
+      document.getElementById("customer_phone").value = customer.phone || "";
+      document.getElementById("customer_address").value = customer.address || "";
+    }
+  }
+  syncTopSummary();
+}
+
+async function saveCustomerMaster() {
+  try {
+    const customer_name = document.getElementById("customer_name").value.trim();
+    const phone = document.getElementById("customer_phone").value.trim();
+    const address = document.getElementById("customer_address").value.trim();
+    if (!customer_name) {
+      alert("고객명을 입력하세요.");
+      return;
+    }
+
+    const { data: existing, error: findError } = await db.from("customers").select("*").eq("customer_name", customer_name).maybeSingle();
+    if (findError) throw findError;
+
+    if (existing) {
+      const { error: updateError } = await db.from("customers").update({ phone, address, updated_at: new Date().toISOString() }).eq("id", existing.id);
+      if (updateError) throw updateError;
+      alert("기존 고객 수정 저장 완료");
+    } else {
+      const { error: insertError } = await db.from("customers").insert([{ customer_name, phone, address, updated_at: new Date().toISOString() }]);
+      if (insertError) throw insertError;
+      alert("신규 고객 저장 완료");
+    }
+
+    await loadCustomers();
+    const matched = customersCache.find(c => c.customer_name === customer_name);
+    if (matched) document.getElementById("customer_select").value = matched.id;
+    syncTopSummary();
+  } catch (err) {
+    alert("고객 저장 실패: " + err.message);
+  }
+}
+
+async function saveSiteMaster() {
+  try {
+    const customerId = document.getElementById("customer_select").value || null;
+    const site_name = document.getElementById("site_name").value.trim();
+    const site_address = document.getElementById("site_address").value.trim();
+    const area_size = toNum(document.getElementById("area_size").value);
+    const work_type = document.getElementById("work_type").value;
+
+    if (!site_address) {
+      alert("현장주소를 입력하세요.");
+      return;
+    }
+
+    const { data: existing, error: findError } = await db.from("sites").select("*").eq("site_address", site_address).maybeSingle();
+    if (findError) throw findError;
+
+    if (existing) {
+      const { error: updateError } = await db.from("sites").update({ customer_id: customerId, site_name, area_size, work_type, updated_at: new Date().toISOString() }).eq("id", existing.id);
+      if (updateError) throw updateError;
+      alert("기존 현장 수정 저장 완료");
+    } else {
+      const { error: insertError } = await db.from("sites").insert([{ customer_id: customerId, site_name, site_address, area_size, work_type, updated_at: new Date().toISOString() }]);
+      if (insertError) throw insertError;
+      alert("신규 현장 저장 완료");
+    }
+
+    await loadSites();
+    const matched = sitesCache.find(s => s.site_address === site_address);
+    if (matched) document.getElementById("site_select").value = matched.id;
+    syncTopSummary();
+  } catch (err) {
+    alert("현장 저장 실패: " + err.message);
+  }
+}
+
+async function upsertCustomer() {
+  const customer_name = document.getElementById("customer_name").value.trim();
+  const phone = document.getElementById("customer_phone").value.trim();
+  const address = document.getElementById("customer_address").value.trim();
+  if (!customer_name) return null;
+
+  const { data: existing, error: findError } = await db.from("customers").select("*").eq("customer_name", customer_name).maybeSingle();
+  if (findError) throw findError;
+
+  if (existing) {
+    const { error: updateError } = await db.from("customers").update({ phone, address, updated_at: new Date().toISOString() }).eq("id", existing.id);
+    if (updateError) throw updateError;
+    return existing.id;
+  }
+
+  const { data: inserted, error: insertError } = await db.from("customers").insert([{ customer_name, phone, address, updated_at: new Date().toISOString() }]).select().single();
+  if (insertError) throw insertError;
+  return inserted.id;
+}
+
+async function upsertSite(customerId) {
+  const site_name = document.getElementById("site_name").value.trim();
+  const site_address = document.getElementById("site_address").value.trim();
+  const area_size = toNum(document.getElementById("area_size").value);
+  const work_type = document.getElementById("work_type").value;
+  if (!site_address) return null;
+
+  const { data: existing, error: findError } = await db.from("sites").select("*").eq("site_address", site_address).maybeSingle();
+  if (findError) throw findError;
+
+  if (existing) {
+    const { error: updateError } = await db.from("sites").update({ customer_id: customerId, site_name, area_size, work_type, updated_at: new Date().toISOString() }).eq("id", existing.id);
+    if (updateError) throw updateError;
+    return existing.id;
+  }
+
+  const { data: inserted, error: insertError } = await db.from("sites").insert([{ customer_id: customerId, site_name, site_address, area_size, work_type, updated_at: new Date().toISOString() }]).select().single();
+  if (insertError) throw insertError;
+  return inserted.id;
+}
+
+async function ensureWorkType(workName) {
+  const name = String(workName || "").trim();
+  if (!name) return null;
+
+  const cacheFound = workTypesCache.find(x => String(x.work_name || "").trim() === name);
+  if (cacheFound) return cacheFound.id;
+
+  const { data: existing, error: findError } = await db.from("work_types").select("*").eq("work_name", name).maybeSingle();
+  if (findError) throw findError;
+  if (existing) {
+    workTypesCache.push(existing);
+    return existing.id;
+  }
+
+  const nextSortNo = (workTypesCache.length ? Math.max(...workTypesCache.map(x => toNum(x.sort_no))) : 0) + 1;
+  const { data: inserted, error: insertError } = await db.from("work_types").insert([{ work_name: name, sort_no: nextSortNo, is_active: true, updated_at: new Date().toISOString() }]).select().single();
+  if (insertError) throw insertError;
+  workTypesCache.push(inserted);
+  return inserted.id;
+}
+
+async function getNextMaterialCode() {
+  const { data, error } = await db.from("materials").select("item_code").order("item_code", { ascending: false }).limit(1);
+  if (error) throw error;
+  if (!data || !data.length || !data[0].item_code) return "item_00001";
+
+  const last = data[0].item_code;
+  const num = parseInt(String(last).replace(/[^\d]/g, ""), 10) || 0;
+  return "item_" + String(num + 1).padStart(5, "0");
+}
+
+async function ensureMaterial(row, workTypeId) {
+  const itemName = String(row.item_name || "").trim();
+  const spec = String(row.spec || "").trim();
+  const unit = String(row.unit || "").trim();
+  if (!itemName) return null;
+
+  const cacheFound = materialsCache.find(x =>
+    String(x.item_name || "").trim() === itemName &&
+    String(x.spec || "").trim() === spec &&
+    String(x.unit || "").trim() === unit &&
+    String(x.work_type_id || "") === String(workTypeId || "")
+  );
+  if (cacheFound) return cacheFound.id;
+
+  let query = db.from("materials").select("*").eq("item_name", itemName).eq("spec", spec).eq("unit", unit);
+  if (workTypeId) query = query.eq("work_type_id", workTypeId);
+
+  const { data: existingList, error: findError } = await query.limit(1);
+  if (findError) throw findError;
+  if (existingList && existingList.length > 0) {
+    materialsCache.push(existingList[0]);
+    return existingList[0].id;
+  }
+
+  const newItemCode = await getNextMaterialCode();
+  const { data: inserted, error: insertError } = await db.from("materials").insert([{
+    item_code: newItemCode,
+    work_type_id: workTypeId,
+    item_name: itemName,
+    spec,
+    unit,
+    customer_price: toNum(row.cost_material) + toNum(row.cost_labor) + toNum(row.cost_expense),
+    cost_material: toNum(row.cost_material),
+    cost_labor: toNum(row.cost_labor),
+    cost_expense: toNum(row.cost_expense),
+    note: String(row.note || "").trim(),
+    is_active: true,
+    updated_at: new Date().toISOString()
+  }]).select().single();
+
+  if (insertError) throw insertError;
+  materialsCache.push(inserted);
+  return inserted.id;
+}
+
+async function saveQuote() {
+  try {
+    const quote_no = document.getElementById("quote_no").value.trim();
+    const quote_date = document.getElementById("quote_date").value;
+    const revision_no = toNum(document.getElementById("revision_no").value) || 1;
+    const quote_status = document.getElementById("quote_status").value;
+    const memo = document.getElementById("quote_memo").value.trim();
+
+    if (!quote_no) return alert("견적번호가 없습니다.");
+    if (!quote_date) return alert("견적일자를 입력하세요.");
+    if (!document.getElementById("customer_name").value.trim()) return alert("고객명을 입력하세요.");
+    if (!document.getElementById("site_address").value.trim()) return alert("현장주소를 입력하세요.");
+
+    const validItems = detailRows.filter(isMeaningfulRow);
+    if (validItems.length === 0) return alert("견적 상세 항목을 한 줄 이상 입력하세요.");
+
+    const customerId = await upsertCustomer();
+    const siteId = await upsertSite(customerId);
+    const amounts = getCurrentAmounts();
+
+    const quotePayload = {
+      quote_no,
+      quote_date,
+      customer_id: customerId,
+      site_id: siteId,
+      revision_no,
+      quote_status,
+      supply_amount: amounts.supplyAmount,
+      vat_amount: amounts.vatAmount,
+      total_amount: amounts.totalAmount,
+      memo,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data: existingQuote, error: quoteFindError } = await db.from("quotes").select("*").eq("quote_no", quote_no).maybeSingle();
+    if (quoteFindError) throw quoteFindError;
+
+    let quoteId = null;
+    if (existingQuote) {
+      const { error: quoteUpdateError } = await db.from("quotes").update(quotePayload).eq("id", existingQuote.id);
+      if (quoteUpdateError) throw quoteUpdateError;
+      quoteId = existingQuote.id;
+      const { error: deleteItemsError } = await db.from("quote_items").delete().eq("quote_id", quoteId);
+      if (deleteItemsError) throw deleteItemsError;
+    } else {
+      const { data: insertedQuote, error: quoteInsertError } = await db.from("quotes").insert([quotePayload]).select().single();
+      if (quoteInsertError) throw quoteInsertError;
+      quoteId = insertedQuote.id;
+    }
+
+    const itemPayloads = [];
+    for (let idx = 0; idx < validItems.length; idx++) {
+      const row = validItems[idx];
+      let finalWorkTypeId = row.work_type_id || null;
+      let finalMaterialId = row.material_id || null;
+
+      if (!finalWorkTypeId && String(row.work_name || "").trim()) {
+        finalWorkTypeId = await ensureWorkType(row.work_name);
+        row.work_type_id = finalWorkTypeId;
+      }
+
+      if (!finalMaterialId && String(row.item_name || "").trim()) {
+        finalMaterialId = await ensureMaterial(row, finalWorkTypeId);
+        row.material_id = finalMaterialId;
+      }
+
+      if (finalWorkTypeId && !row.work_name) {
+        const wt = workTypesCache.find(x => String(x.id) === String(finalWorkTypeId));
+        if (wt) row.work_name = wt.work_name || "";
+      }
+
+      if (finalMaterialId && !row.item_name) {
+        const mt = materialsCache.find(x => String(x.id) === String(finalMaterialId));
+        if (mt) {
+          row.item_name = mt.item_name || "";
+          row.spec = row.spec || mt.spec || "";
+          row.unit = row.unit || mt.unit || "";
+        }
+      }
+
+      updateComputedAmounts(row);
+
+      itemPayloads.push({
+        quote_id: quoteId,
+        line_no: idx + 1,
+        work_type_id: finalWorkTypeId,
+        material_id: finalMaterialId,
+        work_name_snapshot: row.work_name || "",
+        item_name_snapshot: row.item_name || "",
+        spec_snapshot: row.spec || "",
+        unit_snapshot: row.unit || "",
+        qty: toNum(row.qty),
+        unit_price: toNum(row.unit_price),
+        line_amount: toNum(row.line_amount),
+        cost_material: toNum(row.cost_material),
+        cost_labor: toNum(row.cost_labor),
+        cost_expense: toNum(row.cost_expense),
+        note: row.note || "",
+        updated_at: new Date().toISOString()
+      });
+    }
+
+    const { error: itemsInsertError } = await db.from("quote_items").insert(itemPayloads);
+    if (itemsInsertError) throw itemsInsertError;
+
+    await loadCustomers();
+    await loadSites();
+    await loadWorkTypes();
+    await loadMaterials();
+    alert("견적 저장 완료");
+  } catch (err) {
+    console.error(err);
+    alert("저장 실패: " + err.message);
+  }
+}
+
+async function fetchQuoteSearchList() {
+  const { data, error } = await db.from("quotes").select(`
+    id,
+    quote_no,
+    quote_date,
+    total_amount,
+    customers ( customer_name ),
+    sites ( site_name, site_address )
+  `).order("quote_date", { ascending: false }).limit(200);
+  if (error) throw error;
+  quoteSearchCache = data || [];
+}
+
+function openLoadModal() {
+  document.getElementById("loadModal").classList.add("show");
+  document.getElementById("loadSearchInput").value = "";
+  fetchQuoteSearchList()
+    .then(() => renderQuoteSearchResults(""))
+    .catch(err => alert("검색 목록 불러오기 실패: " + err.message));
+}
+
+function closeLoadModal() {
+  document.getElementById("loadModal").classList.remove("show");
+}
+
+function clearQuoteSearch() {
+  document.getElementById("loadSearchInput").value = "";
+  renderQuoteSearchResults("");
+}
+
+function searchQuotes() {
+  const keyword = document.getElementById("loadSearchInput").value.trim();
+  renderQuoteSearchResults(keyword);
+}
+
+function renderQuoteSearchResults(keyword) {
+  const body = document.getElementById("loadSearchBody");
+  const emptyBox = document.getElementById("loadSearchEmpty");
+  body.innerHTML = "";
+
+  const normalized = keyword.toLowerCase();
+  const filtered = quoteSearchCache.filter(row => {
+    if (!normalized) return true;
+    const customerName = String(row.customers?.customer_name || "").toLowerCase();
+    const siteName = String(row.sites?.site_name || "").toLowerCase();
+    const siteAddress = String(row.sites?.site_address || "").toLowerCase();
+    const quoteNo = String(row.quote_no || "").toLowerCase();
+    return customerName.includes(normalized) || siteName.includes(normalized) || siteAddress.includes(normalized) || quoteNo.includes(normalized);
+  });
+
+  if (!filtered.length) {
+    emptyBox.classList.remove("hidden");
+    return;
+  }
+  emptyBox.classList.add("hidden");
+
+  filtered.forEach(row => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(row.quote_no || "")}</td>
+      <td>${escapeHtml(row.quote_date || "")}</td>
+      <td>${escapeHtml(row.customers?.customer_name || "")}</td>
+      <td>${escapeHtml(row.sites?.site_name || "")}</td>
+      <td>${escapeHtml(row.sites?.site_address || "")}</td>
+      <td class="align-right">${formatWon(row.total_amount || 0)}</td>
+      <td><button class="search-row-btn" onclick="selectQuoteFromSearch(${row.id})">불러오기</button></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+async function selectQuoteFromSearch(quoteId) {
+  try {
+    const { data: quote, error: quoteError } = await db.from("quotes").select(`
+      *,
+      customers ( id, customer_name, phone, address ),
+      sites ( id, customer_id, site_name, site_address, area_size, work_type )
+    `).eq("id", quoteId).single();
+    if (quoteError) throw quoteError;
+
+    const { data: items, error: itemsError } = await db.from("quote_items").select("*").eq("quote_id", quote.id).order("line_no", { ascending: true });
+    if (itemsError) throw itemsError;
+
+    document.getElementById("quote_no").value = quote.quote_no || "";
+    document.getElementById("base_quote_no").value = quote.quote_no || "";
+    document.getElementById("revision_no").value = quote.revision_no || 1;
+    document.getElementById("quote_date").value = quote.quote_date || "";
+    document.getElementById("customer_name").value = quote.customers?.customer_name || "";
+    document.getElementById("customer_phone").value = quote.customers?.phone || "";
+    document.getElementById("customer_address").value = quote.customers?.address || "";
+    document.getElementById("site_name").value = quote.sites?.site_name || "";
+    document.getElementById("site_address").value = quote.sites?.site_address || "";
+    document.getElementById("area_size").value = quote.sites?.area_size || "";
+    document.getElementById("work_type").value = quote.sites?.work_type || "본공사";
+    document.getElementById("quote_status").value = quote.quote_status || "가견적";
+    document.getElementById("quote_memo").value = quote.memo || "";
+
+    if (quote.customers?.id) document.getElementById("customer_select").value = quote.customers.id;
+    if (quote.sites?.id) document.getElementById("site_select").value = quote.sites.id;
+
+    detailRows = (items || []).map(row => ({
+      id: crypto.randomUUID(),
+      work_type_id: row.work_type_id || "",
+      material_id: row.material_id || "",
+      work_name: row.work_name_snapshot || "",
+      item_name: row.item_name_snapshot || "",
+      spec: row.spec_snapshot || "",
+      unit: row.unit_snapshot || "",
+      qty: toNum(row.qty),
+      cost_material: toNum(row.cost_material),
+      cost_labor: toNum(row.cost_labor),
+      cost_expense: toNum(row.cost_expense),
+      unit_price: toNum(row.unit_price),
+      line_amount: toNum(row.line_amount),
+      note: row.note || ""
+    }));
+
+    if (detailRows.length === 0) detailRows = [buildEmptyRow()];
+    else detailRows.push(buildEmptyRow());
+
+    renderDetailRows();
+    syncTopSummary();
+    calculateAll();
+    closeLoadModal();
+    alert("견적 불러오기 완료");
+  } catch (err) {
+    console.error(err);
+    alert("불러오기 실패: " + err.message);
+  }
+}
+
+function buildPdfSummaryTable() {
+  const body = document.getElementById("pdfSummaryBody");
+  body.innerHTML = "";
+
+  const meaningfulRows = (detailRows || []).filter(row => {
+    updateComputedAmounts(row);
+    return isMeaningfulRow(row);
+  });
+
+  if (!meaningfulRows.length) {
+    body.innerHTML = `<tr><td colspan="2" class="center">견적 요약 내역이 없습니다.</td></tr>`;
+    return;
+  }
+
+  const groupedMap = new Map();
+  meaningfulRows.forEach(row => {
+    const workName = String(row.work_name || "미분류").trim() || "미분류";
+    if (!groupedMap.has(workName)) groupedMap.set(workName, 0);
+    groupedMap.set(workName, groupedMap.get(workName) + toNum(row.line_amount));
+  });
+
+  const groupedEntries = Array.from(groupedMap.entries()).sort((a, b) => {
+    const orderA = getWorkOrderIndex(a[0]);
+    const orderB = getWorkOrderIndex(b[0]);
+    if (orderA !== orderB) return orderA - orderB;
+    return a[0].localeCompare(b[0], "ko");
+  });
+
+  groupedEntries.forEach(([workName, amount]) => {
+    body.insertAdjacentHTML("beforeend", `
+      <tr>
+        <td>${escapeHtml(workName)}</td>
+        <td>${formatWon(amount)}</td>
+      </tr>
+    `);
+  });
+}
+
+function buildPdfDetailTable() {
+  const pdfBody = document.getElementById("pdfDetailBody");
+  pdfBody.innerHTML = "";
+
+  const meaningfulRows = detailRows.filter(isMeaningfulRow).map(row => {
+    updateComputedAmounts(row);
+    return row;
+  });
+
+  if (meaningfulRows.length === 0) {
+    pdfBody.innerHTML = `<tr><td colspan="7" class="center">견적 상세 내역이 없습니다.</td></tr>`;
+    return;
+  }
+
+  const groupedMap = new Map();
+  meaningfulRows.forEach(row => {
+    const workName = String(row.work_name || "미분류").trim() || "미분류";
+    if (!groupedMap.has(workName)) groupedMap.set(workName, []);
+    groupedMap.get(workName).push(row);
+  });
+
+  const groupedEntries = Array.from(groupedMap.entries()).sort((a, b) => {
+    const orderA = getWorkOrderIndex(a[0]);
+    const orderB = getWorkOrderIndex(b[0]);
+    if (orderA !== orderB) return orderA - orderB;
+    return a[0].localeCompare(b[0], "ko");
+  });
+
+  groupedEntries.forEach(([workName, rows]) => {
+    let subtotal = 0;
+
+    pdfBody.insertAdjacentHTML("beforeend", `
+      <tr class="pdf-group-row">
+        <td colspan="7">${escapeHtml(workName)}</td>
+      </tr>
+    `);
+
+    rows.forEach((row, idx) => {
+      updateComputedAmounts(row);
+      const itemName = escapeHtml(row.item_name || "-");
+      const spec = escapeHtml(row.spec || "-");
+      const unit = escapeHtml(row.unit || "-");
+      const qty = toNum(row.qty).toLocaleString("ko-KR");
+      const amount = formatWon(row.line_amount);
+      const note = escapeHtml(row.note || "");
+      subtotal += toNum(row.line_amount);
+
+      pdfBody.insertAdjacentHTML("beforeend", `
+        <tr>
+          <td class="center">${idx + 1}</td>
+          <td class="center pdf-item-name">${itemName}</td>
+          <td class="center">${spec}</td>
+          <td class="center">${unit}</td>
+          <td class="right">${qty}</td>
+          <td class="right pdf-amount">${amount}</td>
+          <td class="pdf-note">${note}</td>
+        </tr>
+      `);
+    });
+
+    pdfBody.insertAdjacentHTML("beforeend", `
+      <tr class="pdf-subtotal-row">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td class="right">${escapeHtml(workName)} 소계</td>
+        <td class="right pdf-amount">${formatWon(subtotal)}</td>
+        <td></td>
+      </tr>
+    `);
+  });
+}
+
+function fillPdfData() {
+  const amounts = getCurrentAmounts();
+
+  const quoteNo = document.getElementById("quote_no").value || "-";
+  const quoteDate = document.getElementById("quote_date").value || "-";
+  const customerName = document.getElementById("customer_name").value || "-";
+  const customerPhone = document.getElementById("customer_phone").value || "-";
+  const siteName = document.getElementById("site_name").value || "-";
+  const siteAddress = document.getElementById("site_address").value || "-";
+  const workType = document.getElementById("work_type").value || "-";
+  const workPeriod = document.getElementById("work_period").value || "-";
+  const memo = document.getElementById("quote_memo").value || "-";
+
+  document.getElementById("cover_quote_no").textContent = quoteNo;
+  document.getElementById("cover_quote_date").textContent = quoteDate;
+  document.getElementById("cover_customer_name").textContent = customerName;
+document.getElementById("cover_customer_phone").textContent = customerPhone;
+  document.getElementById("cover_site_name").textContent = siteName;
+  document.getElementById("cover_site_address").textContent = siteAddress;
+  document.getElementById("cover_work_type").textContent = workType;
+  
+document.getElementById("summary_customer_name").textContent = customerName;
+  document.getElementById("summary_site_address").textContent = siteAddress;
+ document.getElementById("summary_quote_no").textContent = quoteNo;
+document.getElementById("summary_quote_date").textContent = quoteDate;
+
+
+  document.getElementById("pdf_quote_no").textContent = quoteNo;
+  document.getElementById("pdf_quote_date").textContent = quoteDate;
+  document.getElementById("pdf_customer_name").textContent = customerName;
+  
+ 
+  document.getElementById("pdf_site_address").textContent = siteAddress;
+  
+  
+
+  let directCost = 0;
+  detailRows.filter(isMeaningfulRow).forEach(row => {
+    updateComputedAmounts(row);
+    directCost += toNum(row.line_amount);
+  });
+
+  document.getElementById("pdf_direct_cost").textContent = formatWon(directCost);
+  document.getElementById("pdf_extra_cost").textContent = formatWon(toNum(document.getElementById("extra_cost").value));
+  document.getElementById("pdf_waste_cost").textContent = formatWon(toNum(document.getElementById("waste_cost").value));
+  document.getElementById("pdf_insurance_cost").textContent = formatWon(toNum(document.getElementById("insurance_cost").value));
+  document.getElementById("pdf_site_manage_cost").textContent = formatWon(toNum(document.getElementById("site_manage_cost").value));
+  document.getElementById("pdf_supply_amount").textContent = formatWon(amounts.supplyAmount);
+  document.getElementById("pdf_vat_amount").textContent = formatWon(amounts.vatAmount);
+  document.getElementById("pdf_total_amount").textContent = formatWon(amounts.totalAmount);
+  document.getElementById("pdf_quote_memo").textContent = memo;
+
+  buildPdfSummaryTable();
+  buildPdfDetailTable();
+}
+
+function printQuote() {
+  try {
+    fillPdfData();
+    window.print();
+  } catch (err) {
+    console.error("PDF 인쇄 오류:", err);
+    alert("PDF 인쇄용 데이터 채우기 중 오류: " + err.message);
+  }
+}
+
+function resetQuoteForm() {
+  document.getElementById("quote_no").value = newQuoteNo();
+  document.getElementById("base_quote_no").value = document.getElementById("quote_no").value;
+  document.getElementById("revision_no").value = 1;
+  document.getElementById("quote_date").value = todayStr();
+  document.getElementById("customer_select").value = "";
+  document.getElementById("customer_name").value = "";
+  document.getElementById("customer_phone").value = "";
+  document.getElementById("customer_address").value = "";
+  document.getElementById("site_select").value = "";
+  document.getElementById("site_name").value = "";
+  document.getElementById("site_address").value = "";
+  document.getElementById("area_size").value = "";
+  document.getElementById("work_type").value = "본공사";
+  document.getElementById("work_period").value = "";
+  document.getElementById("quote_status").value = "가견적";
+  document.getElementById("vat_type").value = "10";
+  document.getElementById("extra_cost").value = 0;
+  document.getElementById("waste_cost").value = 0;
+  document.getElementById("insurance_cost").value = 0;
+  document.getElementById("site_manage_cost").value = 0;
+  document.getElementById("quote_memo").value = "";
+
+  detailRows = [buildEmptyRow()];
+  renderDetailRows();
+  syncTopSummary();
+  calculateAll();
+}
+
+async function initApp() {
+  bindBasicEvents();
+  document.getElementById("quote_date").value = todayStr();
+  document.getElementById("quote_no").value = newQuoteNo();
+  document.getElementById("base_quote_no").value = document.getElementById("quote_no").value;
+  document.getElementById("revision_no").value = 1;
+
+  await loadCustomers();
+  await loadSites();
+  await loadWorkTypes();
+  await loadMaterials();
+
+  detailRows = [buildEmptyRow()];
+  renderDetailRows();
+  syncTopSummary();
+  calculateAll();
+}
+
+initApp();
+
+  </script>
+</body>
 </html>
