@@ -1021,20 +1021,62 @@ text-align: right;
   font-weight: 800;
 }
 
+.login-gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9ecef;
+  padding: 24px;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 360px;
+  background: #fff;
+  border: 1px solid #cfd4da;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.login-box h2 {
+  margin: 0 0 18px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #2f3438;
+}
+
+.login-box input {
+  margin-bottom: 10px;
+}
+
   </style>
 </head>
 <body>
-  <div class="wrap">
+<div id="loginGate" class="login-gate">
+  <div class="login-box">
+    <h2>AK디자인 견적서_ERP 로그인</h2>
+    <input type="email" id="loginEmail" placeholder="이메일" />
+    <input type="password" id="loginPassword" placeholder="비밀번호" />
+    <button type="button" onclick="login()">로그인</button>
+  </div>
+</div>
+
+  <div class="wrap hidden" id="appWrap">
     <div class="topbar">
       <div class="title-area">
-        <h1>AK디자인 웹 견적 입력 화면</h1>
+        <h1>AK디자인 견적서_ERP</h1>
         <p>검색형 불러오기 팝업 포함 / 이름·현장명·주소 일부 검색 가능</p>
       </div>
-      <div class="top-buttons">
-        <button class="btn-light" onclick="openLoadModal()">불러오기</button>
-        <button class="btn-light" onclick="printQuote()">PDF 인쇄</button>
-        <button class="btn-primary" onclick="saveQuote()">저장</button>
-      </div>
+   <div class="top-buttons">
+   <button class="btn-primary" onclick="saveQuote()">저장</button>
+  <button class="btn-light" onclick="openLoadModal()">불러오기</button>
+  <button class="btn-light" onclick="printQuote()">PDF 인쇄</button>
+  
+  <button class="btn-light" onclick="logout()">로그아웃</button>
+</div>
     </div><div class="tabs">
   <button class="tab-btn active" onclick="showTab('write')">견적작성</button>
   <button class="tab-btn" onclick="showTab('summary')">견적요약</button>
@@ -1411,6 +1453,70 @@ text-align: right;
     const SUPABASE_URL = "https://rzbqiytumnwvjlmbljbp.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_G7L9_UDamWpmHL6r1pnqLg_7_FLUg4G";
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function showApp() {
+  document.getElementById("loginGate").classList.add("hidden");
+  document.getElementById("appWrap").classList.remove("hidden");
+}
+
+function showLogin() {
+  document.getElementById("loginGate").classList.remove("hidden");
+  document.getElementById("appWrap").classList.add("hidden");
+}
+
+async function checkSessionAndStart() {
+  const { data, error } = await db.auth.getSession();
+
+  if (error) {
+    alert("세션 확인 실패: " + error.message);
+    showLogin();
+    return;
+  }
+
+  if (!data.session) {
+    showLogin();
+    return;
+  }
+
+  showApp();
+  await initApp();
+}
+
+async function login() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
+
+  if (!email || !password) {
+    alert("이메일과 비밀번호를 입력하세요.");
+    return;
+  }
+
+  const { error } = await db.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    alert("로그인 실패: " + error.message);
+    return;
+  }
+
+  showApp();
+  await initApp();
+}
+
+async function logout() {
+  await db.auth.signOut();
+  showLogin();
+}
+
+document.addEventListener("keydown", (e) => {
+  const loginGateVisible = !document.getElementById("loginGate").classList.contains("hidden");
+  if (loginGateVisible && e.key === "Enter") {
+    login();
+  }
+});
+
 
     let detailRows = [];
     let customersCache = [];
@@ -2603,7 +2709,7 @@ async function initApp() {
   calculateAll();
 }
 
-initApp();
+checkSessionAndStart();
 
   </script>
 </body>
