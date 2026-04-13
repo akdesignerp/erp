@@ -107,12 +107,11 @@ function renderCompanyProfitRows() {
         </select>
       </td>
       <td><input value="${escapeHtml(row.item_name)}" onchange="updateCompanyProfitRow('${row.id}','item_name',this.value)" /></td>
-      <td><input type="number" value="${row.customer_amount}" oninput="updateCompanyProfitRow('${row.id}','customer_amount',this.value)" /></td>
-      <td><input type="number" value="${row.labor_vendor_amount}" oninput="updateCompanyProfitRow('${row.id}','labor_vendor_amount',this.value)" /></td>
-      <td><input type="number" value="${row.material_vendor_amount}" oninput="updateCompanyProfitRow('${row.id}','material_vendor_amount',this.value)" /></td>
-      <td><input type="number" value="${row.expense_vendor_amount}" oninput="updateCompanyProfitRow('${row.id}','expense_vendor_amount',this.value)" /></td>
-      <td class="align-right">${formatWon(row.estimated_cost_amount)}</td>
-      <td><input type="number" value="${row.payout_amount}" oninput="updateCompanyProfitRow('${row.id}','payout_amount',this.value)" /></td>
+      <td><input type="number" value="${row.customer_amount}" onchange="updateCompanyProfitRow('${row.id}','customer_amount',this.value)" /></td>
+<td><input type="number" value="${row.labor_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','labor_vendor_amount',this.value)" /></td>
+<td><input type="number" value="${row.material_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','material_vendor_amount',this.value)" /></td>
+<td><input type="number" value="${row.expense_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','expense_vendor_amount',this.value)" /></td>
+<td><input type="number" value="${row.payout_amount}" onchange="updateCompanyProfitRow('${row.id}','payout_amount',this.value)" /></td>
       <td class="align-right">${formatWon(row.estimated_profit_amount)}</td>
       <td class="align-right">${formatWon(row.actual_profit_amount)}</td>
       <td><input value="${escapeHtml(row.note)}" onchange="updateCompanyProfitRow('${row.id}','note',this.value)" /></td>
@@ -170,8 +169,8 @@ function renderPaymentRows() {
           <option value="잔금" ${row.payment_type === "잔금" ? "selected" : ""}>잔금</option>
         </select>
       </td>
-      <td><input type="number" min="1" max="5" value="${row.payment_round}" oninput="updatePaymentRow('${row.id}','payment_round',this.value)" /></td>
-      <td><input type="number" value="${row.amount}" oninput="updatePaymentRow('${row.id}','amount',this.value)" /></td>
+     <td><input type="number" min="1" max="5" value="${row.payment_round}" onchange="updatePaymentRow('${row.id}','payment_round',this.value)" /></td>
+<td><input type="number" value="${row.amount}" onchange="updatePaymentRow('${row.id}','amount',this.value)" /></td>
       <td><input type="date" value="${row.payment_date}" onchange="updatePaymentRow('${row.id}','payment_date',this.value)" /></td>
       <td><input value="${escapeHtml(row.note)}" onchange="updatePaymentRow('${row.id}','note',this.value)" /></td>
       <td><button class="table-btn delete-btn" onclick="removePaymentRow('${row.id}')">삭제</button></td>
@@ -213,6 +212,86 @@ function calcMonthlyCompanyCost() {
   if (totalBox) totalBox.value = formatWon(total);
 }
 
+function getCurrentQuoteStatus() {
+  return document.getElementById("quote_status")?.value || "";
+}
+
+function getCurrentContractDate() {
+  return document.getElementById("contract_date")?.value || "";
+}
+
+function getCurrentQuoteNo() {
+  return document.getElementById("quote_no")?.value.trim() || "";
+}
+
+function normalizeWorkName(name) {
+  return String(name || "").replace(/\s+/g, "").trim();
+}
+
+function buildCompanyRowsFromDetail() {
+  const grouped = new Map();
+
+  detailRows
+    .filter(isMeaningfulRow)
+    .forEach(row => {
+      updateComputedAmounts(row);
+
+      const workName = normalizeWorkName(row.work_name || "미분류") || "미분류";
+
+      if (!grouped.has(workName)) {
+        grouped.set(workName, {
+          id: crypto.randomUUID(),
+          category_type: "공정",
+          item_name: workName,
+          customer_amount: 0,
+          labor_vendor_amount: 0,
+          material_vendor_amount: 0,
+          expense_vendor_amount: 0,
+          estimated_cost_amount: 0,
+          payout_amount: 0,
+          estimated_profit_amount: 0,
+          actual_profit_amount: 0,
+          note: ""
+        });
+      }
+
+      const item = grouped.get(workName);
+      const qty = toNum(row.qty);
+
+      item.customer_amount += toNum(row.line_amount);
+      item.labor_vendor_amount += toNum(row.cost_labor) * qty;
+      item.material_vendor_amount += toNum(row.cost_material) * qty;
+      item.expense_vendor_amount += toNum(row.cost_expense) * qty;
+    });
+
+  const rows = Array.from(grouped.values());
+
+  rows.forEach(calcCompanyProfitRow);
+
+  rows.sort((a, b) => {
+    const orderA = typeof getWorkOrderIndex === "function" ? getWorkOrderIndex(a.item_name) : 9999;
+    const orderB = typeof getWorkOrderIndex === "function" ? getWorkOrderIndex(b.item_name) : 9999;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.item_name.localeCompare(b.item_name, "ko");
+  });
+
+  return rows;
+}
+
+function importCompanyRowsFromDetail() {
+  const imported = buildCompanyRowsFromDetail();
+
+  if (!imported.length) {
+    alert("견적상세에 불러올 공정이 없습니다.");
+    return;
+  }
+
+  companyProfitRows = imported;
+  renderCompanyProfitRows();
+  refreshCompanySummary();
+  alert("견적상세 공정 불러오기 완료");
+}
+
 async function saveMonthlyCompanyCost() {
   try {
     const monthValue = document.getElementById("companyCostMonth").value;
@@ -252,9 +331,277 @@ async function saveMonthlyCompanyCost() {
   }
 }
 
+async function loadMonthlyCompanyCostForCurrentMonth() {
+  try {
+    const monthValue = document.getElementById("companyCostMonth")?.value;
+    if (!monthValue) return;
+
+    const costMonth = `${monthValue}-01`;
+
+    const { data, error } = await db
+      .from("company_monthly_costs")
+      .select("*")
+      .eq("cost_month", costMonth)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return;
+
+    document.getElementById("monthlyStaffSalary").value = toNum(data.staff_salary_amount);
+    document.getElementById("monthlyFixedInsurance").value = toNum(data.fixed_insurance_amount);
+    document.getElementById("monthlyRent").value = toNum(data.monthly_rent_amount);
+    document.getElementById("monthlyOtherExpense").value = toNum(data.other_expense_amount);
+    document.getElementById("monthlyOwnerSalary").value = toNum(data.owner_salary_amount);
+
+    calcMonthlyCompanyCost();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function allocateMonthlyCompanyCost() {
+  try {
+    const monthValue = document.getElementById("companyCostMonth")?.value;
+    if (!monthValue) {
+      alert("기준월을 선택하세요.");
+      return;
+    }
+
+    const costMonth = `${monthValue}-01`;
+    const allocationMethod = document.getElementById("companyAllocationMethod")?.value || "매출비례";
+
+    const { data: monthlyCost, error: monthlyError } = await db
+      .from("company_monthly_costs")
+      .select("*")
+      .eq("cost_month", costMonth)
+      .maybeSingle();
+
+    if (monthlyError) throw monthlyError;
+    if (!monthlyCost) {
+      alert("먼저 해당 월의 회사고정비를 저장하세요.");
+      return;
+    }
+
+    const { data: masters, error: mastersError } = await db
+      .from("profit_master")
+      .select(`
+        *,
+        quotes (
+          quote_status,
+          contract_date
+        )
+      `);
+
+    if (mastersError) throw mastersError;
+
+    const validRows = (masters || []).filter(row => {
+      const status = row.quotes?.quote_status || "";
+      const contractDate = row.contract_date || row.quotes?.contract_date || "";
+      return (
+        (status === "확정견적" || status === "공사완료") &&
+        String(contractDate).substring(0, 7) === monthValue
+      );
+    });
+
+    if (!validRows.length) {
+      alert("해당 월에 배부할 확정견적/공사완료 현장이 없습니다.");
+      return;
+    }
+
+    const totalSalesBasis = validRows.reduce((sum, row) => sum + toNum(row.total_sales_amount), 0);
+
+    const { error: deleteAllocError } = await db
+      .from("company_cost_allocations")
+      .delete()
+      .eq("cost_month", costMonth);
+
+    if (deleteAllocError) throw deleteAllocError;
+
+    const payloads = validRows.map(row => {
+      let rate = 0;
+
+      if (allocationMethod === "균등배부") {
+        rate = 1 / validRows.length;
+      } else if (allocationMethod === "매출비례") {
+        rate = totalSalesBasis === 0 ? 0 : toNum(row.total_sales_amount) / totalSalesBasis;
+      } else {
+        rate = 0;
+      }
+
+      const allocatedStaff = Math.round(toNum(monthlyCost.staff_salary_amount) * rate);
+      const allocatedInsurance = Math.round(toNum(monthlyCost.fixed_insurance_amount) * rate);
+      const allocatedRent = Math.round(toNum(monthlyCost.monthly_rent_amount) * rate);
+      const allocatedOther = Math.round(toNum(monthlyCost.other_expense_amount) * rate);
+      const allocatedOwner = Math.round(toNum(monthlyCost.owner_salary_amount) * rate);
+
+      return {
+        cost_month: costMonth,
+        quote_id: row.quote_id,
+        site_id: row.site_id,
+        allocation_method: allocationMethod,
+        sales_basis_amount: toNum(row.total_sales_amount),
+        allocation_rate: rate,
+        allocated_staff_salary_amount: allocatedStaff,
+        allocated_fixed_insurance_amount: allocatedInsurance,
+        allocated_monthly_rent_amount: allocatedRent,
+        allocated_other_expense_amount: allocatedOther,
+        allocated_owner_salary_amount: allocatedOwner,
+        total_allocated_amount:
+          allocatedStaff +
+          allocatedInsurance +
+          allocatedRent +
+          allocatedOther +
+          allocatedOwner
+      };
+    });
+
+    const { error: insertAllocError } = await db
+      .from("company_cost_allocations")
+      .insert(payloads);
+
+    if (insertAllocError) throw insertAllocError;
+
+    alert("회사배부관리비 자동 배부 완료");
+  } catch (err) {
+    console.error(err);
+    alert("회사배부관리비 자동 배부 실패: " + err.message);
+  }
+}
+
+async function loadAllocationIntoCurrentQuote() {
+  try {
+    const quoteNo = getCurrentQuoteNo();
+    const monthValue = document.getElementById("companyCostMonth")?.value;
+
+    if (!quoteNo) {
+      alert("현재 견적번호가 없습니다.");
+      return;
+    }
+    if (!monthValue) {
+      alert("기준월을 선택하세요.");
+      return;
+    }
+
+    const costMonth = `${monthValue}-01`;
+
+    const { data: quoteRow, error: quoteError } = await db
+      .from("quotes")
+      .select("*")
+      .eq("quote_no", quoteNo)
+      .maybeSingle();
+
+    if (quoteError) throw quoteError;
+    if (!quoteRow) {
+      alert("해당 견적을 찾을 수 없습니다.");
+      return;
+    }
+
+    const { data: allocRow, error: allocError } = await db
+      .from("company_cost_allocations")
+      .select("*")
+      .eq("cost_month", costMonth)
+      .eq("quote_id", quoteRow.id)
+      .maybeSingle();
+
+    if (allocError) throw allocError;
+    if (!allocRow) {
+      alert("해당 견적에 대한 회사배부관리비 배부내역이 없습니다.");
+      return;
+    }
+
+    companyProfitRows = companyProfitRows.filter(row =>
+      row.category_type !== "회사배부관리비"
+    );
+
+    const allocItems = [
+      {
+        id: crypto.randomUUID(),
+        category_type: "회사배부관리비",
+        item_name: "직원 월급",
+        customer_amount: 0,
+        labor_vendor_amount: 0,
+        material_vendor_amount: 0,
+        expense_vendor_amount: toNum(allocRow.allocated_staff_salary_amount),
+        estimated_cost_amount: 0,
+        payout_amount: toNum(allocRow.allocated_staff_salary_amount),
+        estimated_profit_amount: 0,
+        actual_profit_amount: 0,
+        note: "자동배부"
+      },
+      {
+        id: crypto.randomUUID(),
+        category_type: "회사배부관리비",
+        item_name: "고정보험료",
+        customer_amount: 0,
+        labor_vendor_amount: 0,
+        material_vendor_amount: 0,
+        expense_vendor_amount: toNum(allocRow.allocated_fixed_insurance_amount),
+        estimated_cost_amount: 0,
+        payout_amount: toNum(allocRow.allocated_fixed_insurance_amount),
+        estimated_profit_amount: 0,
+        actual_profit_amount: 0,
+        note: "자동배부"
+      },
+      {
+        id: crypto.randomUUID(),
+        category_type: "회사배부관리비",
+        item_name: "월 임대료",
+        customer_amount: 0,
+        labor_vendor_amount: 0,
+        material_vendor_amount: 0,
+        expense_vendor_amount: toNum(allocRow.allocated_monthly_rent_amount),
+        estimated_cost_amount: 0,
+        payout_amount: toNum(allocRow.allocated_monthly_rent_amount),
+        estimated_profit_amount: 0,
+        actual_profit_amount: 0,
+        note: "자동배부"
+      },
+      {
+        id: crypto.randomUUID(),
+        category_type: "회사배부관리비",
+        item_name: "기타지출비",
+        customer_amount: 0,
+        labor_vendor_amount: 0,
+        material_vendor_amount: 0,
+        expense_vendor_amount: toNum(allocRow.allocated_other_expense_amount),
+        estimated_cost_amount: 0,
+        payout_amount: toNum(allocRow.allocated_other_expense_amount),
+        estimated_profit_amount: 0,
+        actual_profit_amount: 0,
+        note: "자동배부"
+      },
+      {
+        id: crypto.randomUUID(),
+        category_type: "회사배부관리비",
+        item_name: "사장 급여",
+        customer_amount: 0,
+        labor_vendor_amount: 0,
+        material_vendor_amount: 0,
+        expense_vendor_amount: toNum(allocRow.allocated_owner_salary_amount),
+        estimated_cost_amount: 0,
+        payout_amount: toNum(allocRow.allocated_owner_salary_amount),
+        estimated_profit_amount: 0,
+        actual_profit_amount: 0,
+        note: "자동배부"
+      }
+    ];
+
+    allocItems.forEach(calcCompanyProfitRow);
+    companyProfitRows = companyProfitRows.concat(allocItems);
+
+    renderCompanyProfitRows();
+    refreshCompanySummary();
+
+    alert("현재 견적에 회사배부관리비 반영 완료");
+  } catch (err) {
+    console.error(err);
+    alert("회사배부관리비 반영 실패: " + err.message);
+  }
+}
+
 async function saveCompanyProfit() {
   try {
-    const quoteNo = document.getElementById("quote_no")?.value.trim();
+    const quoteNo = getCurrentQuoteNo();
     if (!quoteNo) {
       alert("현재 견적번호가 없습니다.");
       return;
@@ -359,6 +706,7 @@ async function saveCompanyProfit() {
     }
 
     alert("회사수익 저장 완료");
+    await loadCompanyDashboards();
   } catch (err) {
     console.error(err);
     alert("회사수익 저장 실패: " + err.message);
@@ -367,7 +715,7 @@ async function saveCompanyProfit() {
 
 async function savePayments() {
   try {
-    const quoteNo = document.getElementById("quote_no")?.value.trim();
+    const quoteNo = getCurrentQuoteNo();
     if (!quoteNo) {
       alert("현재 견적번호가 없습니다.");
       return;
@@ -395,7 +743,7 @@ async function savePayments() {
     const paymentPayloads = companyPaymentRows.map(row => ({
       quote_id: quoteRow.id,
       payment_type: row.payment_type,
-      payment_round: row.payment_round ? toNum(row.payment_round) : null,
+      payment_round: row.payment_type === "중도금" && row.payment_round ? toNum(row.payment_round) : null,
       amount: toNum(row.amount),
       payment_date: row.payment_date || null,
       note: row.note || ""
@@ -419,7 +767,7 @@ async function savePayments() {
 
 async function loadCompanyProfitByCurrentQuote() {
   try {
-    const quoteNo = document.getElementById("quote_no")?.value.trim();
+    const quoteNo = getCurrentQuoteNo();
     if (!quoteNo) {
       alert("현재 견적번호가 없습니다.");
       return;
@@ -485,6 +833,7 @@ async function loadCompanyProfitByCurrentQuote() {
       note: row.note || ""
     }));
 
+    if (companyProfitRows.length === 0) companyProfitRows = buildCompanyRowsFromDetail();
     if (companyProfitRows.length === 0) companyProfitRows = [buildEmptyCompanyProfitRow()];
     if (companyPaymentRows.length === 0) companyPaymentRows = [buildEmptyPaymentRow()];
 
@@ -645,12 +994,30 @@ function renderYearSummary(rows) {
 }
 
 function initCompanyTab() {
-  if (companyProfitRows.length === 0) companyProfitRows = [buildEmptyCompanyProfitRow()];
-  if (companyPaymentRows.length === 0) companyPaymentRows = [buildEmptyPaymentRow()];
+  if (companyProfitRows.length === 0) {
+    const imported = buildCompanyRowsFromDetail();
+    companyProfitRows = imported.length ? imported : [buildEmptyCompanyProfitRow()];
+  }
+
+  if (companyPaymentRows.length === 0) {
+    companyPaymentRows = [buildEmptyPaymentRow()];
+  }
+
+  const costMonthInput = document.getElementById("companyCostMonth");
+  if (costMonthInput && !costMonthInput.value) {
+    const contractDate = getCurrentContractDate();
+    if (contractDate) {
+      costMonthInput.value = String(contractDate).substring(0, 7);
+    } else {
+      const now = new Date();
+      costMonthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    }
+  }
 
   renderCompanyProfitRows();
   renderPaymentRows();
   refreshCompanySummary();
   calcMonthlyCompanyCost();
+  loadMonthlyCompanyCostForCurrentMonth();
   loadCompanyDashboards();
 }
