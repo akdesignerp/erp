@@ -262,11 +262,11 @@
         <div class="card-header" style="font-size:18px;">현장 손익 상세</div>
         <div class="card-body">
           <div class="inline-actions" style="margin-bottom:10px;">
-            <button class="btn-light" onclick="addCompanyProfitRow()">행추가</button>
-            <button class="btn-light" onclick="saveCompanyProfit()">회사수익 저장</button>
-            <button class="btn-light" onclick="loadCompanyProfitByCurrentQuote()">현재견적 불러오기</button>
-          </div>
-
+  <button class="btn-light" onclick="importCompanyRowsFromDetail()">공정 자동불러오기</button>
+  <button class="btn-light" onclick="addCompanyProfitRow()">행추가</button>
+  <button class="btn-light" onclick="saveCompanyProfit()">회사수익 저장</button>
+  <button class="btn-light" onclick="loadCompanyProfitByCurrentQuote()">현재견적 불러오기</button>
+</div>
           <div class="table-wrap">
             <table style="min-width:1800px;">
               <thead>
@@ -362,9 +362,11 @@
           </div>
 
           <div class="inline-actions" style="margin-top:12px;">
-            <button class="btn-light" onclick="calcMonthlyCompanyCost()">합계계산</button>
-            <button class="btn-light" onclick="saveMonthlyCompanyCost()">월고정비 저장</button>
-          </div>
+  <button class="btn-light" onclick="calcMonthlyCompanyCost()">합계계산</button>
+  <button class="btn-light" onclick="saveMonthlyCompanyCost()">월고정비 저장</button>
+  <button class="btn-light" onclick="allocateMonthlyCompanyCost()">자동배부</button>
+  <button class="btn-light" onclick="loadAllocationIntoCurrentQuote()">현재견적 반영</button>
+</div>
         </div>
       </div>
 

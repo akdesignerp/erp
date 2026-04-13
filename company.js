@@ -107,11 +107,16 @@ function renderCompanyProfitRows() {
         </select>
       </td>
       <td><input value="${escapeHtml(row.item_name)}" onchange="updateCompanyProfitRow('${row.id}','item_name',this.value)" /></td>
-      <td><input type="number" value="${row.customer_amount}" onchange="updateCompanyProfitRow('${row.id}','customer_amount',this.value)" /></td>
+     
+ <td><input type="number" value="${row.customer_amount}" onchange="updateCompanyProfitRow('${row.id}','customer_amount',this.value)" /></td>
 <td><input type="number" value="${row.labor_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','labor_vendor_amount',this.value)" /></td>
 <td><input type="number" value="${row.material_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','material_vendor_amount',this.value)" /></td>
 <td><input type="number" value="${row.expense_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','expense_vendor_amount',this.value)" /></td>
-<td><input type="number" value="${row.payout_amount}" onchange="updateCompanyProfitRow('${row.id}','payout_amount',this.value)" /></td>
+    
+               <td class="align-right">${formatWon(row.estimated_cost_amount)}</td>
+
+     <td><input type="number" value="${row.payout_amount}" onchange="updateCompanyProfitRow('${row.id}','payout_amount',this.value)" /></td>
+
       <td class="align-right">${formatWon(row.estimated_profit_amount)}</td>
       <td class="align-right">${formatWon(row.actual_profit_amount)}</td>
       <td><input value="${escapeHtml(row.note)}" onchange="updateCompanyProfitRow('${row.id}','note',this.value)" /></td>
@@ -169,8 +174,8 @@ function renderPaymentRows() {
           <option value="잔금" ${row.payment_type === "잔금" ? "selected" : ""}>잔금</option>
         </select>
       </td>
-     <td><input type="number" min="1" max="5" value="${row.payment_round}" onchange="updatePaymentRow('${row.id}','payment_round',this.value)" /></td>
-<td><input type="number" value="${row.amount}" onchange="updatePaymentRow('${row.id}','amount',this.value)" /></td>
+      <td><input type="number" min="1" max="5" value="${row.payment_round}" onchange="updatePaymentRow('${row.id}','payment_round',this.value)" /></td>
+      <td><input type="number" value="${row.amount}" onchange="updatePaymentRow('${row.id}','amount',this.value)" /></td>
       <td><input type="date" value="${row.payment_date}" onchange="updatePaymentRow('${row.id}','payment_date',this.value)" /></td>
       <td><input value="${escapeHtml(row.note)}" onchange="updatePaymentRow('${row.id}','note',this.value)" /></td>
       <td><button class="table-btn delete-btn" onclick="removePaymentRow('${row.id}')">삭제</button></td>
