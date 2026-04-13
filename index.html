@@ -229,10 +229,163 @@
 <div id="tab-company" class="hidden">
   <div class="card">
     <div class="card-header">회사관리</div>
-    <div class="card-body"><p>다음 단계에서 공종별 수익, 현장 수익 패널을 여기에 붙입니다.</p></div>
+    <div class="card-body">
+
+      <div class="summary-strip" style="margin-bottom:16px;">
+        <div class="mini-card">
+          <div class="label">총매출</div>
+          <div class="value" id="companyTotalSales">₩ 0</div>
+        </div>
+        <div class="mini-card">
+          <div class="label">총예상매입</div>
+          <div class="value" id="companyTotalEstimatedCost">₩ 0</div>
+        </div>
+        <div class="mini-card">
+          <div class="label">총실매입</div>
+          <div class="value" id="companyTotalActualCost">₩ 0</div>
+        </div>
+        <div class="mini-card">
+          <div class="label">예상이익</div>
+          <div class="value" id="companyTotalEstimatedProfit">₩ 0</div>
+        </div>
+        <div class="mini-card">
+          <div class="label">실이익</div>
+          <div class="value" id="companyTotalActualProfit">₩ 0</div>
+        </div>
+        <div class="mini-card">
+          <div class="label">총입금액</div>
+          <div class="value" id="companyTotalReceived">₩ 0</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-header" style="font-size:18px;">현장 손익 상세</div>
+        <div class="card-body">
+          <div class="inline-actions" style="margin-bottom:10px;">
+            <button class="btn-light" onclick="addCompanyProfitRow()">행추가</button>
+            <button class="btn-light" onclick="saveCompanyProfit()">회사수익 저장</button>
+            <button class="btn-light" onclick="loadCompanyProfitByCurrentQuote()">현재견적 불러오기</button>
+          </div>
+
+          <div class="table-wrap">
+            <table style="min-width:1800px;">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>구분</th>
+                  <th>항목명</th>
+                  <th>고객견적가</th>
+                  <th>노무비(업체)</th>
+                  <th>자재비(업체)</th>
+                  <th>경비(업체)</th>
+                  <th>총예상매입</th>
+                  <th>지급액</th>
+                  <th>예상이익</th>
+                  <th>실이익</th>
+                  <th>비고</th>
+                  <th>삭제</th>
+                </tr>
+              </thead>
+              <tbody id="companyProfitBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-header" style="font-size:18px;">입금 내역</div>
+        <div class="card-body">
+          <div class="inline-actions" style="margin-bottom:10px;">
+            <button class="btn-light" onclick="addPaymentRow()">입금행 추가</button>
+            <button class="btn-light" onclick="savePayments()">입금내역 저장</button>
+          </div>
+
+          <div class="table-wrap">
+            <table style="min-width:1200px;">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>구분</th>
+                  <th>회차</th>
+                  <th>금액</th>
+                  <th>입금일</th>
+                  <th>비고</th>
+                  <th>삭제</th>
+                </tr>
+              </thead>
+              <tbody id="companyPaymentBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-header" style="font-size:18px;">월별 회사 고정비</div>
+        <div class="card-body">
+          <div class="form-grid-4">
+            <div class="field">
+              <label>기준월</label>
+              <input type="month" id="companyCostMonth" />
+            </div>
+            <div class="field">
+              <label>직원 월급</label>
+              <input type="number" id="monthlyStaffSalary" value="0" />
+            </div>
+            <div class="field">
+              <label>고정보험료</label>
+              <input type="number" id="monthlyFixedInsurance" value="0" />
+            </div>
+            <div class="field">
+              <label>월 임대료</label>
+              <input type="number" id="monthlyRent" value="0" />
+            </div>
+            <div class="field">
+              <label>기타지출비</label>
+              <input type="number" id="monthlyOtherExpense" value="0" />
+            </div>
+            <div class="field">
+              <label>사장 급여</label>
+              <input type="number" id="monthlyOwnerSalary" value="0" />
+            </div>
+            <div class="field">
+              <label>배부 방식</label>
+              <select id="companyAllocationMethod">
+                <option value="매출비례">매출비례</option>
+                <option value="균등배부">균등배부</option>
+                <option value="수동">수동</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>총 회사고정비</label>
+              <input type="text" id="monthlyTotalCompanyCost" readonly />
+            </div>
+          </div>
+
+          <div class="inline-actions" style="margin-top:12px;">
+            <button class="btn-light" onclick="calcMonthlyCompanyCost()">합계계산</button>
+            <button class="btn-light" onclick="saveMonthlyCompanyCost()">월고정비 저장</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-info" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="info-box">
+          <h4>현장별 집계</h4>
+          <div id="siteSummaryList">아직 집계 없음</div>
+        </div>
+        <div class="info-box">
+          <h4>월별 집계</h4>
+          <div id="monthSummaryList">아직 집계 없음</div>
+        </div>
+        <div class="info-box">
+          <h4>연별 집계</h4>
+          <div id="yearSummaryList">아직 집계 없음</div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
-
   </div>  <div id="loadModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
@@ -405,7 +558,7 @@
 
 
   <script src="app.js"></script>
-
+<script src="company.js"></script>
 
 </body>
 </html>

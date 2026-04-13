@@ -138,11 +138,13 @@ document.addEventListener("keydown", (e) => {
       } else if (tabName === "detail") {
         document.getElementById("tab-detail").classList.remove("hidden");
         document.querySelectorAll(".tab-btn")[2].classList.add("active");
-      } else if (tabName === "company") {
-        document.getElementById("tab-company").classList.remove("hidden");
-        document.querySelectorAll(".tab-btn")[3].classList.add("active");
-      }
-    }
+    } else if (tabName === "company") {
+  document.getElementById("tab-company").classList.remove("hidden");
+  document.querySelectorAll(".tab-btn")[3].classList.add("active");
+  if (typeof initCompanyTab === "function") {
+    initCompanyTab();
+  }
+}
 
     function buildEmptyRow() {
       return {
