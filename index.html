@@ -176,7 +176,7 @@
             <th>경비</th>
             <th>금액</th>
             <th>비고</th>
-            <th>삭제</th>
+            <th>관리</th>
           </tr>
         </thead>
         <tbody id="quoteDetailBody"></tbody>
@@ -262,10 +262,10 @@
         <div class="card-header" style="font-size:18px;">현장 손익 상세</div>
         <div class="card-body">
           <div class="inline-actions" style="margin-bottom:10px;">
-  <button class="btn-light" onclick="importCompanyRowsFromDetail()">공정 자동불러오기</button>
+
   <button class="btn-light" onclick="addCompanyProfitRow()">행추가</button>
   <button class="btn-light" onclick="saveCompanyProfit()">회사수익 저장</button>
-  <button class="btn-light" onclick="loadCompanyProfitByCurrentQuote()">현재견적 불러오기</button>
+
 </div>
           <div class="table-wrap">
             <table style="min-width:1800px;">
@@ -443,6 +443,11 @@
     <span>상호</span>
     <strong>AK디자인</strong>
   </div>
+<div class="pdf-cover-company-row">
+    <span>사업자번호</span>
+    <strong>143-12-01221</strong>
+  </div>
+
   <div class="pdf-cover-company-row">
     <span>대표</span>
     <strong>김민석</strong>

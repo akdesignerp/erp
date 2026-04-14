@@ -334,8 +334,15 @@ document.addEventListener("keydown", (e) => {
           <td><input type="number" value="${row.cost_labor}" oninput="updateRowValue('${row.id}','cost_labor',this.value)" /></td>
           <td><input type="number" value="${row.cost_expense}" oninput="updateRowValue('${row.id}','cost_expense',this.value)" /></td>
           <td class="align-right" style="min-width:140px;"><strong id="line_amount_${row.id}">${formatWon(row.line_amount)}</strong></td>
-          <td><textarea onchange="updateRowValue('${row.id}','note',this.value)" placeholder="비고">${escapeHtml(row.note)}</textarea></td><td><button class="table-btn delete-btn" onclick="removeQuoteRow('${row.id}')">삭제</button></td>
-    `;
+          <td><textarea onchange="updateRowValue('${row.id}','note',this.value)" placeholder="비고">${escapeHtml(row.note)}</textarea></td>
+<td>
+  <div style="display:flex; gap:3px; flex-direction:column;">
+    
+    <button class="table-btn delete-btn" onclick="removeQuoteRow('${row.id}')">D</button>
+<button class="table-btn" onclick="updateMaterialMasterFromRow('${row.id}')">E</button>
+
+  </div>
+</td>    `;
     body.appendChild(tr);
   });
 
@@ -820,6 +827,10 @@ async function saveQuote() {
       vat_amount: amounts.vatAmount,
       total_amount: amounts.totalAmount,
       memo,
+extra_cost: toNum(document.getElementById("extra_cost").value),
+waste_cost: toNum(document.getElementById("waste_cost").value),
+insurance_cost: toNum(document.getElementById("insurance_cost").value),
+site_manage_cost: toNum(document.getElementById("site_manage_cost").value),
       updated_at: new Date().toISOString()
     };
 
@@ -894,11 +905,20 @@ async function saveQuote() {
     const { error: itemsInsertError } = await db.from("quote_items").insert(itemPayloads);
     if (itemsInsertError) throw itemsInsertError;
 
-    await loadCustomers();
-    await loadSites();
-    await loadWorkTypes();
-    await loadMaterials();
-    alert("견적 저장 완료");
+   await loadCustomers();
+await loadSites();
+await loadWorkTypes();
+await loadMaterials();
+
+if (typeof saveCompanyDataFromQuote === "function") {
+  await saveCompanyDataFromQuote();
+}
+
+if (typeof savePaymentsFromQuote === "function") {
+  await savePaymentsFromQuote();
+}
+
+alert("견적 저장 완료");
   } catch (err) {
     console.error(err);
     alert("저장 실패: " + err.message);
@@ -1002,6 +1022,11 @@ async function selectQuoteFromSearch(quoteId) {
     document.getElementById("quote_status").value = quote.quote_status || "가견적";
     document.getElementById("quote_memo").value = quote.memo || "";
 
+document.getElementById("extra_cost").value = toNum(quote.extra_cost);
+document.getElementById("waste_cost").value = toNum(quote.waste_cost);
+document.getElementById("insurance_cost").value = toNum(quote.insurance_cost);
+document.getElementById("site_manage_cost").value = toNum(quote.site_manage_cost);
+
     if (quote.customers?.id) document.getElementById("customer_select").value = quote.customers.id;
     if (quote.sites?.id) document.getElementById("site_select").value = quote.sites.id;
 
@@ -1025,11 +1050,16 @@ async function selectQuoteFromSearch(quoteId) {
     if (detailRows.length === 0) detailRows = [buildEmptyRow()];
     else detailRows.push(buildEmptyRow());
 
-    renderDetailRows();
-    syncTopSummary();
-    calculateAll();
-    closeLoadModal();
-    alert("견적 불러오기 완료");
+  renderDetailRows();
+syncTopSummary();
+calculateAll();
+
+if (typeof loadCompanyProfitByCurrentQuote === "function") {
+  await syncCompanyDataAfterQuoteLoad();
+}
+
+closeLoadModal();
+alert("견적 불러오기 완료");
   } catch (err) {
     console.error(err);
     alert("불러오기 실패: " + err.message);
@@ -1237,6 +1267,11 @@ function resetQuoteForm() {
   document.getElementById("site_manage_cost").value = 0;
   document.getElementById("quote_memo").value = "";
 
+document.getElementById("extra_cost").value = 0;
+document.getElementById("waste_cost").value = 0;
+document.getElementById("insurance_cost").value = 0;
+document.getElementById("site_manage_cost").value = 0;
+
   detailRows = [buildEmptyRow()];
   renderDetailRows();
   syncTopSummary();
@@ -1265,3 +1300,62 @@ document.addEventListener("DOMContentLoaded", () => {
 checkSessionAndStart();
 });
 
+async function updateMaterialMasterFromRow(rowId) {
+  try {
+    const row = detailRows.find(r => r.id === rowId);
+    if (!row) {
+      alert("행을 찾을 수 없습니다.");
+      return;
+    }
+
+    if (!row.material_id) {
+      alert("기존 등록 품목만 단가수정 가능합니다.\n신규 품목이면 먼저 견적 저장 후 수정하세요.");
+      return;
+    }
+
+    const itemName = String(row.item_name || "").trim();
+    if (!itemName) {
+      alert("품목명이 없습니다.");
+      return;
+    }
+
+    const materialCost = toNum(row.cost_material);
+    const laborCost = toNum(row.cost_labor);
+    const expenseCost = toNum(row.cost_expense);
+
+    const ok = confirm(
+      `[${itemName}] 마스터 단가를 수정하시겠습니까?\n\n` +
+      `자재비: ${materialCost.toLocaleString("ko-KR")}\n` +
+      `노무비: ${laborCost.toLocaleString("ko-KR")}\n` +
+      `경비: ${expenseCost.toLocaleString("ko-KR")}\n\n` +
+      `이 변경은 앞으로 신규 작성부터 적용됩니다.\n기존 견적서는 변경되지 않습니다.`
+    );
+
+    if (!ok) return;
+
+    const payload = {
+      item_name: row.item_name || "",
+      spec: row.spec || "",
+      unit: row.unit || "",
+      cost_material: materialCost,
+      cost_labor: laborCost,
+      cost_expense: expenseCost,
+      customer_price: materialCost + laborCost + expenseCost,
+      note: row.note || "",
+      updated_at: new Date().toISOString()
+    };
+
+    const { error } = await db
+      .from("materials")
+      .update(payload)
+      .eq("id", row.material_id);
+
+    if (error) throw error;
+
+    await loadMaterials();
+    alert("단가수정 완료\n앞으로 신규 작성부터 적용됩니다.");
+  } catch (err) {
+    console.error(err);
+    alert("단가수정 실패: " + err.message);
+  }
+}

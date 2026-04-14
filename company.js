@@ -1,6 +1,10 @@
 let companyProfitRows = [];
 let companyPaymentRows = [];
+let currentQuoteTotalAmount = 0;
 
+// ===============================
+// 기본 행 생성
+// ===============================
 function buildEmptyCompanyProfitRow() {
   return {
     id: crypto.randomUUID(),
@@ -29,6 +33,9 @@ function buildEmptyPaymentRow() {
   };
 }
 
+// ===============================
+// 공통 계산
+// ===============================
 function calcCompanyProfitRow(row) {
   row.customer_amount = toNum(row.customer_amount);
   row.labor_vendor_amount = toNum(row.labor_vendor_amount);
@@ -48,42 +55,230 @@ function calcCompanyProfitRow(row) {
     row.customer_amount - row.payout_amount;
 }
 
-function addCompanyProfitRow() {
-  companyProfitRows.push(buildEmptyCompanyProfitRow());
-  renderCompanyProfitRows();
-  refreshCompanySummary();
+function normalizeWorkName(name) {
+  return String(name || "").replace(/\s+/g, "").trim();
 }
 
-function removeCompanyProfitRow(id) {
-  companyProfitRows = companyProfitRows.filter(row => row.id !== id);
-  if (companyProfitRows.length === 0) {
-    companyProfitRows.push(buildEmptyCompanyProfitRow());
+function getCurrentQuoteNo() {
+  return document.getElementById("quote_no")?.value.trim() || "";
+}
+
+function getCurrentContractDate() {
+  return (
+    document.getElementById("contract_date")?.value ||
+    document.getElementById("quote_date")?.value ||
+    ""
+  );
+}
+
+// ===============================
+// 견적상세 → 회사관리 공정 자동 생성
+// ===============================
+function buildCompanyRowsFromDetail() {
+  const grouped = new Map();
+
+  (detailRows || [])
+    .filter(isMeaningfulRow)
+    .forEach(row => {
+      updateComputedAmounts(row);
+
+      const workName = normalizeWorkName(row.work_name || "미분류") || "미분류";
+
+      if (!grouped.has(workName)) {
+        grouped.set(workName, {
+          id: crypto.randomUUID(),
+          category_type: "공정",
+          item_name: workName,
+          customer_amount: 0,
+          labor_vendor_amount: 0,
+          material_vendor_amount: 0,
+          expense_vendor_amount: 0,
+          estimated_cost_amount: 0,
+          payout_amount: 0,
+          estimated_profit_amount: 0,
+          actual_profit_amount: 0,
+          note: ""
+        });
+      }
+
+      const item = grouped.get(workName);
+      const qty = toNum(row.qty);
+
+      const materialCost = toNum(row.cost_material) * qty;
+      const laborCost = toNum(row.cost_labor) * qty;
+      const expenseCost = toNum(row.cost_expense) * qty;
+      const customerAmount = toNum(row.line_amount);
+
+      item.customer_amount += customerAmount;
+      item.material_vendor_amount += materialCost;
+      item.labor_vendor_amount += laborCost;
+      item.expense_vendor_amount += expenseCost;
+    });
+
+  const rows = Array.from(grouped.values());
+
+  rows.forEach(calcCompanyProfitRow);
+
+  rows.sort((a, b) => {
+    const orderA = typeof getWorkOrderIndex === "function" ? getWorkOrderIndex(a.item_name) : 9999;
+    const orderB = typeof getWorkOrderIndex === "function" ? getWorkOrderIndex(b.item_name) : 9999;
+    if (orderA !== orderB) return orderA - orderB;
+    return String(a.item_name || "").localeCompare(String(b.item_name || ""), "ko");
+  });
+
+  return rows;
+}
+
+// ===============================
+// 견적작성 추가비용 → 회사관리 행 생성
+// ===============================
+function buildExtraCostRowsFromForm() {
+  const rows = [];
+
+  const extraCost = toNum(document.getElementById("extra_cost")?.value);
+  const wasteCost = toNum(document.getElementById("waste_cost")?.value);
+  const insuranceCost = toNum(document.getElementById("insurance_cost")?.value);
+  const siteManageCost = toNum(document.getElementById("site_manage_cost")?.value);
+
+  if (extraCost > 0) {
+    rows.push({
+      id: crypto.randomUUID(),
+      category_type: "기타공사비",
+      item_name: "기타공사비",
+      customer_amount: extraCost,
+      labor_vendor_amount: 0,
+      material_vendor_amount: 0,
+      expense_vendor_amount: extraCost,
+      estimated_cost_amount: 0,
+      payout_amount: extraCost,
+      estimated_profit_amount: 0,
+      actual_profit_amount: 0,
+      note: ""
+    });
   }
-  renderCompanyProfitRows();
-  refreshCompanySummary();
-}
 
-function updateCompanyProfitRow(id, key, value) {
-  const row = companyProfitRows.find(r => r.id === id);
-  if (!row) return;
-
-  if ([
-    "customer_amount",
-    "labor_vendor_amount",
-    "material_vendor_amount",
-    "expense_vendor_amount",
-    "payout_amount"
-  ].includes(key)) {
-    row[key] = toNum(value);
-  } else {
-    row[key] = value;
+  if (wasteCost > 0) {
+    rows.push({
+      id: crypto.randomUUID(),
+      category_type: "폐기물비",
+      item_name: "폐기물비",
+      customer_amount: wasteCost,
+      labor_vendor_amount: 0,
+      material_vendor_amount: 0,
+      expense_vendor_amount: wasteCost,
+      estimated_cost_amount: 0,
+      payout_amount: wasteCost,
+      estimated_profit_amount: 0,
+      actual_profit_amount: 0,
+      note: ""
+    });
   }
 
-  calcCompanyProfitRow(row);
-  renderCompanyProfitRows();
-  refreshCompanySummary();
+  if (insuranceCost > 0) {
+    rows.push({
+      id: crypto.randomUUID(),
+      category_type: "산재비용",
+      item_name: "산재보험비",
+      customer_amount: insuranceCost,
+      labor_vendor_amount: 0,
+      material_vendor_amount: 0,
+      expense_vendor_amount: insuranceCost,
+      estimated_cost_amount: 0,
+      payout_amount: insuranceCost,
+      estimated_profit_amount: 0,
+      actual_profit_amount: 0,
+      note: ""
+    });
+  }
+
+  if (siteManageCost > 0) {
+    rows.push({
+      id: crypto.randomUUID(),
+      category_type: "현장직접관리비",
+      item_name: "현장관리비",
+      customer_amount: siteManageCost,
+      labor_vendor_amount: 0,
+      material_vendor_amount: 0,
+      expense_vendor_amount: siteManageCost,
+      estimated_cost_amount: 0,
+      payout_amount: siteManageCost,
+      estimated_profit_amount: 0,
+      actual_profit_amount: 0,
+      note: ""
+    });
+  }
+
+  rows.forEach(calcCompanyProfitRow);
+  return rows;
 }
 
+// ===============================
+// 저장된 회사관리 + 현재 견적상세/추가비용 병합
+// ===============================
+function mergeCompanyRowsWithDetail(savedRows) {
+  const detailRowsBuilt = buildCompanyRowsFromDetail();
+  const extraRowsBuilt = buildExtraCostRowsFromForm();
+  const liveRows = [...detailRowsBuilt, ...extraRowsBuilt];
+
+  if (!savedRows || savedRows.length === 0) {
+    return liveRows;
+  }
+
+  const result = [];
+  const savedMap = new Map();
+
+  savedRows.forEach(row => {
+    const key = `${row.category_type}::${normalizeWorkName(row.item_name || "")}`;
+    savedMap.set(key, row);
+  });
+
+  liveRows.forEach(liveRow => {
+    const key = `${liveRow.category_type}::${normalizeWorkName(liveRow.item_name || "")}`;
+    const saved = savedMap.get(key);
+
+    if (saved) {
+      const merged = {
+        ...saved,
+        customer_amount: liveRow.customer_amount,
+        labor_vendor_amount: liveRow.labor_vendor_amount,
+        material_vendor_amount: liveRow.material_vendor_amount,
+        expense_vendor_amount: liveRow.expense_vendor_amount
+      };
+
+      calcCompanyProfitRow(merged);
+      result.push(merged);
+      savedMap.delete(key);
+    } else {
+      calcCompanyProfitRow(liveRow);
+      result.push(liveRow);
+    }
+  });
+
+  savedMap.forEach(row => {
+    calcCompanyProfitRow(row);
+    result.push(row);
+  });
+
+  result.sort((a, b) => {
+    if (a.category_type === "공정" && b.category_type === "공정") {
+      const orderA = typeof getWorkOrderIndex === "function" ? getWorkOrderIndex(a.item_name) : 9999;
+      const orderB = typeof getWorkOrderIndex === "function" ? getWorkOrderIndex(b.item_name) : 9999;
+      if (orderA !== orderB) return orderA - orderB;
+      return String(a.item_name || "").localeCompare(String(b.item_name || ""), "ko");
+    }
+
+    if (a.category_type === "공정") return -1;
+    if (b.category_type === "공정") return 1;
+
+    return String(a.category_type || "").localeCompare(String(b.category_type || ""), "ko");
+  });
+
+  return result;
+}
+
+// ===============================
+// 회사관리 행 렌더
+// ===============================
 function renderCompanyProfitRows() {
   const body = document.getElementById("companyProfitBody");
   if (!body) return;
@@ -107,16 +302,12 @@ function renderCompanyProfitRows() {
         </select>
       </td>
       <td><input value="${escapeHtml(row.item_name)}" onchange="updateCompanyProfitRow('${row.id}','item_name',this.value)" /></td>
-     
- <td><input type="number" value="${row.customer_amount}" onchange="updateCompanyProfitRow('${row.id}','customer_amount',this.value)" /></td>
-<td><input type="number" value="${row.labor_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','labor_vendor_amount',this.value)" /></td>
-<td><input type="number" value="${row.material_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','material_vendor_amount',this.value)" /></td>
-<td><input type="number" value="${row.expense_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','expense_vendor_amount',this.value)" /></td>
-    
-               <td class="align-right">${formatWon(row.estimated_cost_amount)}</td>
-
-     <td><input type="number" value="${row.payout_amount}" onchange="updateCompanyProfitRow('${row.id}','payout_amount',this.value)" /></td>
-
+      <td><input type="number" value="${row.customer_amount}" onchange="updateCompanyProfitRow('${row.id}','customer_amount',this.value)" /></td>
+      <td><input type="number" value="${row.labor_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','labor_vendor_amount',this.value)" /></td>
+      <td><input type="number" value="${row.material_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','material_vendor_amount',this.value)" /></td>
+      <td><input type="number" value="${row.expense_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','expense_vendor_amount',this.value)" /></td>
+      <td class="align-right">${formatWon(row.estimated_cost_amount)}</td>
+      <td><input type="number" value="${row.payout_amount}" onchange="updateCompanyProfitRow('${row.id}','payout_amount',this.value)" /></td>
       <td class="align-right">${formatWon(row.estimated_profit_amount)}</td>
       <td class="align-right">${formatWon(row.actual_profit_amount)}</td>
       <td><input value="${escapeHtml(row.note)}" onchange="updateCompanyProfitRow('${row.id}','note',this.value)" /></td>
@@ -126,35 +317,45 @@ function renderCompanyProfitRows() {
   });
 }
 
-function addPaymentRow() {
-  companyPaymentRows.push(buildEmptyPaymentRow());
-  renderPaymentRows();
-  refreshCompanySummary();
+function addCompanyProfitRow() {
+  companyProfitRows.push(buildEmptyCompanyProfitRow());
+  renderCompanyProfitRows();
+  refreshCompanySummary(currentQuoteTotalAmount);
 }
 
-function removePaymentRow(id) {
-  companyPaymentRows = companyPaymentRows.filter(row => row.id !== id);
-  if (companyPaymentRows.length === 0) {
-    companyPaymentRows.push(buildEmptyPaymentRow());
+function removeCompanyProfitRow(id) {
+  companyProfitRows = companyProfitRows.filter(row => row.id !== id);
+  if (companyProfitRows.length === 0) {
+    companyProfitRows.push(buildEmptyCompanyProfitRow());
   }
-  renderPaymentRows();
-  refreshCompanySummary();
+  renderCompanyProfitRows();
+  refreshCompanySummary(currentQuoteTotalAmount);
 }
 
-function updatePaymentRow(id, key, value) {
-  const row = companyPaymentRows.find(r => r.id === id);
+function updateCompanyProfitRow(id, key, value) {
+  const row = companyProfitRows.find(r => r.id === id);
   if (!row) return;
 
-  if (key === "amount") {
+  if ([
+    "customer_amount",
+    "labor_vendor_amount",
+    "material_vendor_amount",
+    "expense_vendor_amount",
+    "payout_amount"
+  ].includes(key)) {
     row[key] = toNum(value);
   } else {
     row[key] = value;
   }
 
-  renderPaymentRows();
-  refreshCompanySummary();
+  calcCompanyProfitRow(row);
+  renderCompanyProfitRows();
+  refreshCompanySummary(currentQuoteTotalAmount);
 }
 
+// ===============================
+// 입금행 렌더
+// ===============================
 function renderPaymentRows() {
   const body = document.getElementById("companyPaymentBody");
   if (!body) return;
@@ -184,12 +385,48 @@ function renderPaymentRows() {
   });
 }
 
-function refreshCompanySummary() {
-  const totalSales = companyProfitRows.reduce((sum, row) => sum + toNum(row.customer_amount), 0);
+function addPaymentRow() {
+  companyPaymentRows.push(buildEmptyPaymentRow());
+  renderPaymentRows();
+  refreshCompanySummary(currentQuoteTotalAmount);
+}
+
+function removePaymentRow(id) {
+  companyPaymentRows = companyPaymentRows.filter(row => row.id !== id);
+  if (companyPaymentRows.length === 0) {
+    companyPaymentRows.push(buildEmptyPaymentRow());
+  }
+  renderPaymentRows();
+  refreshCompanySummary(currentQuoteTotalAmount);
+}
+
+function updatePaymentRow(id, key, value) {
+  const row = companyPaymentRows.find(r => r.id === id);
+  if (!row) return;
+
+  if (key === "amount") {
+    row[key] = toNum(value);
+  } else {
+    row[key] = value;
+  }
+
+  renderPaymentRows();
+  refreshCompanySummary(currentQuoteTotalAmount);
+}
+
+// ===============================
+// 회사관리 상단 요약
+// ===============================
+function refreshCompanySummary(totalSalesOverride = null) {
+  if (totalSalesOverride !== null && totalSalesOverride !== undefined) {
+    currentQuoteTotalAmount = toNum(totalSalesOverride);
+  }
+
+  const totalSales = toNum(currentQuoteTotalAmount);
   const totalEstimatedCost = companyProfitRows.reduce((sum, row) => sum + toNum(row.estimated_cost_amount), 0);
   const totalActualCost = companyProfitRows.reduce((sum, row) => sum + toNum(row.payout_amount), 0);
-  const totalEstimatedProfit = companyProfitRows.reduce((sum, row) => sum + toNum(row.estimated_profit_amount), 0);
-  const totalActualProfit = companyProfitRows.reduce((sum, row) => sum + toNum(row.actual_profit_amount), 0);
+  const totalEstimatedProfit = totalSales - totalEstimatedCost;
+  const totalActualProfit = totalSales - totalActualCost;
   const totalReceived = companyPaymentRows.reduce((sum, row) => sum + toNum(row.amount), 0);
 
   const setText = (id, value) => {
@@ -205,6 +442,9 @@ function refreshCompanySummary() {
   setText("companyTotalReceived", totalReceived);
 }
 
+// ===============================
+// 월고정비
+// ===============================
 function calcMonthlyCompanyCost() {
   const staff = toNum(document.getElementById("monthlyStaffSalary")?.value);
   const insurance = toNum(document.getElementById("monthlyFixedInsurance")?.value);
@@ -217,100 +457,20 @@ function calcMonthlyCompanyCost() {
   if (totalBox) totalBox.value = formatWon(total);
 }
 
-function getCurrentQuoteStatus() {
-  return document.getElementById("quote_status")?.value || "";
-}
-
-function getCurrentContractDate() {
-  return document.getElementById("contract_date")?.value || "";
-}
-
-function getCurrentQuoteNo() {
-  return document.getElementById("quote_no")?.value.trim() || "";
-}
-
-function normalizeWorkName(name) {
-  return String(name || "").replace(/\s+/g, "").trim();
-}
-
-function buildCompanyRowsFromDetail() {
-  const grouped = new Map();
-
-  detailRows
-    .filter(isMeaningfulRow)
-    .forEach(row => {
-      updateComputedAmounts(row);
-
-      const workName = normalizeWorkName(row.work_name || "미분류") || "미분류";
-
-      if (!grouped.has(workName)) {
-        grouped.set(workName, {
-          id: crypto.randomUUID(),
-          category_type: "공정",
-          item_name: workName,
-          customer_amount: 0,
-          labor_vendor_amount: 0,
-          material_vendor_amount: 0,
-          expense_vendor_amount: 0,
-          estimated_cost_amount: 0,
-          payout_amount: 0,
-          estimated_profit_amount: 0,
-          actual_profit_amount: 0,
-          note: ""
-        });
-      }
-
-      const item = grouped.get(workName);
-      const qty = toNum(row.qty);
-
-      item.customer_amount += toNum(row.line_amount);
-      item.labor_vendor_amount += toNum(row.cost_labor) * qty;
-      item.material_vendor_amount += toNum(row.cost_material) * qty;
-      item.expense_vendor_amount += toNum(row.cost_expense) * qty;
-    });
-
-  const rows = Array.from(grouped.values());
-
-  rows.forEach(calcCompanyProfitRow);
-
-  rows.sort((a, b) => {
-    const orderA = typeof getWorkOrderIndex === "function" ? getWorkOrderIndex(a.item_name) : 9999;
-    const orderB = typeof getWorkOrderIndex === "function" ? getWorkOrderIndex(b.item_name) : 9999;
-    if (orderA !== orderB) return orderA - orderB;
-    return a.item_name.localeCompare(b.item_name, "ko");
-  });
-
-  return rows;
-}
-
-function importCompanyRowsFromDetail() {
-  const imported = buildCompanyRowsFromDetail();
-
-  if (!imported.length) {
-    alert("견적상세에 불러올 공정이 없습니다.");
-    return;
-  }
-
-  companyProfitRows = imported;
-  renderCompanyProfitRows();
-  refreshCompanySummary();
-  alert("견적상세 공정 불러오기 완료");
-}
-
 async function saveMonthlyCompanyCost() {
   try {
-    const monthValue = document.getElementById("companyCostMonth").value;
+    const monthValue = document.getElementById("companyCostMonth")?.value;
     if (!monthValue) {
       alert("기준월을 선택하세요.");
       return;
     }
 
     const costMonth = `${monthValue}-01`;
-    const staff = toNum(document.getElementById("monthlyStaffSalary").value);
-    const insurance = toNum(document.getElementById("monthlyFixedInsurance").value);
-    const rent = toNum(document.getElementById("monthlyRent").value);
-    const other = toNum(document.getElementById("monthlyOtherExpense").value);
-    const owner = toNum(document.getElementById("monthlyOwnerSalary").value);
+    const staff = toNum(document.getElementById("monthlyStaffSalary")?.value);
+    const insurance = toNum(document.getElementById("monthlyFixedInsurance")?.value);
+    const rent = toNum(document.getElementById("monthlyRent")?.value);
+    const other = toNum(document.getElementById("monthlyOtherExpense")?.value);
+    const owner = toNum(document.getElementById("monthlyOwnerSalary")?.value);
     const total = staff + insurance + rent + other + owner;
 
     const { error } = await db
@@ -364,6 +524,9 @@ async function loadMonthlyCompanyCostForCurrentMonth() {
   }
 }
 
+// ===============================
+// 회사배부관리비 자동배부
+// ===============================
 async function allocateMonthlyCompanyCost() {
   try {
     const monthValue = document.getElementById("companyCostMonth")?.value;
@@ -514,9 +677,7 @@ async function loadAllocationIntoCurrentQuote() {
       return;
     }
 
-    companyProfitRows = companyProfitRows.filter(row =>
-      row.category_type !== "회사배부관리비"
-    );
+    companyProfitRows = companyProfitRows.filter(row => row.category_type !== "회사배부관리비");
 
     const allocItems = [
       {
@@ -595,7 +756,7 @@ async function loadAllocationIntoCurrentQuote() {
     companyProfitRows = companyProfitRows.concat(allocItems);
 
     renderCompanyProfitRows();
-    refreshCompanySummary();
+    refreshCompanySummary(currentQuoteTotalAmount);
 
     alert("현재 견적에 회사배부관리비 반영 완료");
   } catch (err) {
@@ -604,112 +765,151 @@ async function loadAllocationIntoCurrentQuote() {
   }
 }
 
+// ===============================
+// 회사수익 저장 / 입금 저장
+// ===============================
+async function saveCompanyDataFromQuote() {
+  const quoteNo = getCurrentQuoteNo();
+  if (!quoteNo) return;
+
+  const { data: quoteRow, error: quoteError } = await db
+    .from("quotes")
+    .select("*")
+    .eq("quote_no", quoteNo)
+    .maybeSingle();
+
+  if (quoteError) throw quoteError;
+  if (!quoteRow) return;
+
+  const totalSales = toNum(quoteRow.total_amount);
+  const totalEstimatedCost = companyProfitRows.reduce((sum, row) => sum + toNum(row.estimated_cost_amount), 0);
+  const totalActualCost = companyProfitRows.reduce((sum, row) => sum + toNum(row.payout_amount), 0);
+  const totalEstimatedProfit = totalSales - totalEstimatedCost;
+  const totalActualProfit = totalSales - totalActualCost;
+  const totalReceived = companyPaymentRows.reduce((sum, row) => sum + toNum(row.amount), 0);
+  const outstanding = totalSales - totalReceived;
+  const profitRate = totalSales === 0 ? 0 : (totalActualProfit / totalSales) * 100;
+
+  const masterPayload = {
+    quote_id: quoteRow.id,
+    quote_no: quoteRow.quote_no,
+    customer_id: quoteRow.customer_id,
+    site_id: quoteRow.site_id,
+    contract_date: quoteRow.contract_date,
+    total_sales_amount: totalSales,
+    total_estimated_cost: totalEstimatedCost,
+    total_actual_cost: totalActualCost,
+    total_estimated_profit: totalEstimatedProfit,
+    total_actual_profit: totalActualProfit,
+    total_received_amount: totalReceived,
+    total_outstanding_amount: outstanding,
+    total_profit_rate: profitRate,
+    memo: ""
+  };
+
+  const { data: existingMaster, error: findMasterError } = await db
+    .from("profit_master")
+    .select("*")
+    .eq("quote_id", quoteRow.id)
+    .maybeSingle();
+
+  if (findMasterError) throw findMasterError;
+
+  let masterId;
+
+  if (existingMaster) {
+    const { error: updateMasterError } = await db
+      .from("profit_master")
+      .update(masterPayload)
+      .eq("id", existingMaster.id);
+
+    if (updateMasterError) throw updateMasterError;
+    masterId = existingMaster.id;
+
+    const { error: deleteItemsError } = await db
+      .from("profit_items")
+      .delete()
+      .eq("profit_master_id", masterId);
+
+    if (deleteItemsError) throw deleteItemsError;
+  } else {
+    const { data: insertedMaster, error: insertMasterError } = await db
+      .from("profit_master")
+      .insert([masterPayload])
+      .select()
+      .single();
+
+    if (insertMasterError) throw insertMasterError;
+    masterId = insertedMaster.id;
+  }
+
+  const itemPayloads = companyProfitRows.map((row, idx) => ({
+    profit_master_id: masterId,
+    line_no: idx + 1,
+    category_type: row.category_type,
+    item_name: row.item_name,
+    customer_amount: toNum(row.customer_amount),
+    labor_vendor_amount: toNum(row.labor_vendor_amount),
+    material_vendor_amount: toNum(row.material_vendor_amount),
+    expense_vendor_amount: toNum(row.expense_vendor_amount),
+    estimated_cost_amount: toNum(row.estimated_cost_amount),
+    payout_amount: toNum(row.payout_amount),
+    estimated_profit_amount: toNum(row.estimated_profit_amount),
+    actual_profit_amount: toNum(row.actual_profit_amount),
+    note: row.note || ""
+  }));
+
+  if (itemPayloads.length > 0) {
+    const { error: insertItemsError } = await db
+      .from("profit_items")
+      .insert(itemPayloads);
+
+    if (insertItemsError) throw insertItemsError;
+  }
+}
+
+async function savePaymentsFromQuote() {
+  const quoteNo = getCurrentQuoteNo();
+  if (!quoteNo) return;
+
+  const { data: quoteRow, error: quoteError } = await db
+    .from("quotes")
+    .select("*")
+    .eq("quote_no", quoteNo)
+    .maybeSingle();
+
+  if (quoteError) throw quoteError;
+  if (!quoteRow) return;
+
+  const { error: deletePaymentsError } = await db
+    .from("payments")
+    .delete()
+    .eq("quote_id", quoteRow.id);
+
+  if (deletePaymentsError) throw deletePaymentsError;
+
+  const paymentPayloads = companyPaymentRows.map(row => ({
+    quote_id: quoteRow.id,
+    payment_type: row.payment_type,
+    payment_round: row.payment_type === "중도금" && row.payment_round ? toNum(row.payment_round) : null,
+    amount: toNum(row.amount),
+    payment_date: row.payment_date || null,
+    note: row.note || ""
+  }));
+
+  if (paymentPayloads.length > 0) {
+    const { error: insertPaymentsError } = await db
+      .from("payments")
+      .insert(paymentPayloads);
+
+    if (insertPaymentsError) throw insertPaymentsError;
+  }
+}
+
+// 기존 버튼 호환용
 async function saveCompanyProfit() {
   try {
-    const quoteNo = getCurrentQuoteNo();
-    if (!quoteNo) {
-      alert("현재 견적번호가 없습니다.");
-      return;
-    }
-
-    const { data: quoteRow, error: quoteError } = await db
-      .from("quotes")
-      .select("*")
-      .eq("quote_no", quoteNo)
-      .maybeSingle();
-
-    if (quoteError) throw quoteError;
-    if (!quoteRow) {
-      alert("먼저 기본 견적 저장을 완료하세요.");
-      return;
-    }
-
-    const totalSales = companyProfitRows.reduce((sum, row) => sum + toNum(row.customer_amount), 0);
-    const totalEstimatedCost = companyProfitRows.reduce((sum, row) => sum + toNum(row.estimated_cost_amount), 0);
-    const totalActualCost = companyProfitRows.reduce((sum, row) => sum + toNum(row.payout_amount), 0);
-    const totalEstimatedProfit = companyProfitRows.reduce((sum, row) => sum + toNum(row.estimated_profit_amount), 0);
-    const totalActualProfit = companyProfitRows.reduce((sum, row) => sum + toNum(row.actual_profit_amount), 0);
-    const totalReceived = companyPaymentRows.reduce((sum, row) => sum + toNum(row.amount), 0);
-    const outstanding = totalSales - totalReceived;
-    const profitRate = totalSales === 0 ? 0 : (totalActualProfit / totalSales) * 100;
-
-    const masterPayload = {
-      quote_id: quoteRow.id,
-      quote_no: quoteRow.quote_no,
-      customer_id: quoteRow.customer_id,
-      site_id: quoteRow.site_id,
-      contract_date: quoteRow.contract_date,
-      total_sales_amount: totalSales,
-      total_estimated_cost: totalEstimatedCost,
-      total_actual_cost: totalActualCost,
-      total_estimated_profit: totalEstimatedProfit,
-      total_actual_profit: totalActualProfit,
-      total_received_amount: totalReceived,
-      total_outstanding_amount: outstanding,
-      total_profit_rate: profitRate,
-      memo: ""
-    };
-
-    const { data: existingMaster, error: findMasterError } = await db
-      .from("profit_master")
-      .select("*")
-      .eq("quote_id", quoteRow.id)
-      .maybeSingle();
-
-    if (findMasterError) throw findMasterError;
-
-    let masterId;
-
-    if (existingMaster) {
-      const { error: updateMasterError } = await db
-        .from("profit_master")
-        .update(masterPayload)
-        .eq("id", existingMaster.id);
-
-      if (updateMasterError) throw updateMasterError;
-      masterId = existingMaster.id;
-
-      const { error: deleteItemsError } = await db
-        .from("profit_items")
-        .delete()
-        .eq("profit_master_id", masterId);
-
-      if (deleteItemsError) throw deleteItemsError;
-    } else {
-      const { data: insertedMaster, error: insertMasterError } = await db
-        .from("profit_master")
-        .insert([masterPayload])
-        .select()
-        .single();
-
-      if (insertMasterError) throw insertMasterError;
-      masterId = insertedMaster.id;
-    }
-
-    const itemPayloads = companyProfitRows.map((row, idx) => ({
-      profit_master_id: masterId,
-      line_no: idx + 1,
-      category_type: row.category_type,
-      item_name: row.item_name,
-      customer_amount: toNum(row.customer_amount),
-      labor_vendor_amount: toNum(row.labor_vendor_amount),
-      material_vendor_amount: toNum(row.material_vendor_amount),
-      expense_vendor_amount: toNum(row.expense_vendor_amount),
-      estimated_cost_amount: toNum(row.estimated_cost_amount),
-      payout_amount: toNum(row.payout_amount),
-      estimated_profit_amount: toNum(row.estimated_profit_amount),
-      actual_profit_amount: toNum(row.actual_profit_amount),
-      note: row.note || ""
-    }));
-
-    if (itemPayloads.length > 0) {
-      const { error: insertItemsError } = await db
-        .from("profit_items")
-        .insert(itemPayloads);
-
-      if (insertItemsError) throw insertItemsError;
-    }
-
+    await saveCompanyDataFromQuote();
     alert("회사수익 저장 완료");
     await loadCompanyDashboards();
   } catch (err) {
@@ -720,49 +920,8 @@ async function saveCompanyProfit() {
 
 async function savePayments() {
   try {
-    const quoteNo = getCurrentQuoteNo();
-    if (!quoteNo) {
-      alert("현재 견적번호가 없습니다.");
-      return;
-    }
-
-    const { data: quoteRow, error: quoteError } = await db
-      .from("quotes")
-      .select("*")
-      .eq("quote_no", quoteNo)
-      .maybeSingle();
-
-    if (quoteError) throw quoteError;
-    if (!quoteRow) {
-      alert("먼저 기본 견적 저장을 완료하세요.");
-      return;
-    }
-
-    const { error: deletePaymentsError } = await db
-      .from("payments")
-      .delete()
-      .eq("quote_id", quoteRow.id);
-
-    if (deletePaymentsError) throw deletePaymentsError;
-
-    const paymentPayloads = companyPaymentRows.map(row => ({
-      quote_id: quoteRow.id,
-      payment_type: row.payment_type,
-      payment_round: row.payment_type === "중도금" && row.payment_round ? toNum(row.payment_round) : null,
-      amount: toNum(row.amount),
-      payment_date: row.payment_date || null,
-      note: row.note || ""
-    }));
-
-    if (paymentPayloads.length > 0) {
-      const { error: insertPaymentsError } = await db
-        .from("payments")
-        .insert(paymentPayloads);
-
-      if (insertPaymentsError) throw insertPaymentsError;
-    }
-
-    refreshCompanySummary();
+    await savePaymentsFromQuote();
+    refreshCompanySummary(currentQuoteTotalAmount);
     alert("입금내역 저장 완료");
   } catch (err) {
     console.error(err);
@@ -770,7 +929,10 @@ async function savePayments() {
   }
 }
 
-async function loadCompanyProfitByCurrentQuote() {
+// ===============================
+// 회사관리 불러오기
+// ===============================
+async function loadCompanyProfitByCurrentQuote(showMessage = true) {
   try {
     const quoteNo = getCurrentQuoteNo();
     if (!quoteNo) {
@@ -798,13 +960,34 @@ async function loadCompanyProfitByCurrentQuote() {
 
     if (masterError) throw masterError;
 
-    const { data: itemRows, error: itemsError } = await db
-      .from("profit_items")
-      .select("*")
-      .eq("profit_master_id", masterRow?.id || 0)
-      .order("line_no", { ascending: true });
+    let savedRows = [];
 
-    if (itemsError && masterRow) throw itemsError;
+    if (masterRow) {
+      const { data: itemRows, error: itemsError } = await db
+        .from("profit_items")
+        .select("*")
+        .eq("profit_master_id", masterRow.id)
+        .order("line_no", { ascending: true });
+
+      if (itemsError) throw itemsError;
+
+      savedRows = (itemRows || []).map(row => ({
+        id: crypto.randomUUID(),
+        category_type: row.category_type || "공정",
+        item_name: row.item_name || "",
+        customer_amount: toNum(row.customer_amount),
+        labor_vendor_amount: toNum(row.labor_vendor_amount),
+        material_vendor_amount: toNum(row.material_vendor_amount),
+        expense_vendor_amount: toNum(row.expense_vendor_amount),
+        estimated_cost_amount: toNum(row.estimated_cost_amount),
+        payout_amount: toNum(row.payout_amount),
+        estimated_profit_amount: toNum(row.estimated_profit_amount),
+        actual_profit_amount: toNum(row.actual_profit_amount),
+        note: row.note || ""
+      }));
+    }
+
+    companyProfitRows = mergeCompanyRowsWithDetail(savedRows);
 
     const { data: paymentRows, error: paymentsError } = await db
       .from("payments")
@@ -813,21 +996,6 @@ async function loadCompanyProfitByCurrentQuote() {
       .order("payment_date", { ascending: true });
 
     if (paymentsError) throw paymentsError;
-
-    companyProfitRows = (itemRows || []).map(row => ({
-      id: crypto.randomUUID(),
-      category_type: row.category_type || "공정",
-      item_name: row.item_name || "",
-      customer_amount: toNum(row.customer_amount),
-      labor_vendor_amount: toNum(row.labor_vendor_amount),
-      material_vendor_amount: toNum(row.material_vendor_amount),
-      expense_vendor_amount: toNum(row.expense_vendor_amount),
-      estimated_cost_amount: toNum(row.estimated_cost_amount),
-      payout_amount: toNum(row.payout_amount),
-      estimated_profit_amount: toNum(row.estimated_profit_amount),
-      actual_profit_amount: toNum(row.actual_profit_amount),
-      note: row.note || ""
-    }));
 
     companyPaymentRows = (paymentRows || []).map(row => ({
       id: crypto.randomUUID(),
@@ -838,21 +1006,109 @@ async function loadCompanyProfitByCurrentQuote() {
       note: row.note || ""
     }));
 
-    if (companyProfitRows.length === 0) companyProfitRows = buildCompanyRowsFromDetail();
     if (companyProfitRows.length === 0) companyProfitRows = [buildEmptyCompanyProfitRow()];
     if (companyPaymentRows.length === 0) companyPaymentRows = [buildEmptyPaymentRow()];
 
     renderCompanyProfitRows();
     renderPaymentRows();
-    refreshCompanySummary();
+    refreshCompanySummary(toNum(quoteRow.total_amount));
 
-    alert("회사관리 불러오기 완료");
+    if (showMessage) {
+      alert("회사관리 불러오기 완료");
+    }
   } catch (err) {
     console.error(err);
     alert("회사관리 불러오기 실패: " + err.message);
   }
 }
 
+// ===============================
+// 견적 불러오기 후 자동 동기화
+// ===============================
+async function syncCompanyDataAfterQuoteLoad() {
+  const quoteNo = getCurrentQuoteNo();
+  if (!quoteNo) return;
+
+  try {
+    const { data: quoteRow, error: quoteError } = await db
+      .from("quotes")
+      .select("*")
+      .eq("quote_no", quoteNo)
+      .maybeSingle();
+
+    if (quoteError) throw quoteError;
+    if (!quoteRow) return;
+
+    const { data: masterRow, error: masterError } = await db
+      .from("profit_master")
+      .select("*")
+      .eq("quote_id", quoteRow.id)
+      .maybeSingle();
+
+    if (masterError) throw masterError;
+
+    let savedRows = [];
+
+    if (masterRow) {
+      const { data: itemRows, error: itemsError } = await db
+        .from("profit_items")
+        .select("*")
+        .eq("profit_master_id", masterRow.id)
+        .order("line_no", { ascending: true });
+
+      if (itemsError) throw itemsError;
+
+      savedRows = (itemRows || []).map(row => ({
+        id: crypto.randomUUID(),
+        category_type: row.category_type || "공정",
+        item_name: row.item_name || "",
+        customer_amount: toNum(row.customer_amount),
+        labor_vendor_amount: toNum(row.labor_vendor_amount),
+        material_vendor_amount: toNum(row.material_vendor_amount),
+        expense_vendor_amount: toNum(row.expense_vendor_amount),
+        estimated_cost_amount: toNum(row.estimated_cost_amount),
+        payout_amount: toNum(row.payout_amount),
+        estimated_profit_amount: toNum(row.estimated_profit_amount),
+        actual_profit_amount: toNum(row.actual_profit_amount),
+        note: row.note || ""
+      }));
+    }
+
+    companyProfitRows = mergeCompanyRowsWithDetail(savedRows);
+
+    const { data: paymentRows, error: paymentsError } = await db
+      .from("payments")
+      .select("*")
+      .eq("quote_id", quoteRow.id)
+      .order("payment_date", { ascending: true });
+
+    if (paymentsError) throw paymentsError;
+
+    companyPaymentRows = (paymentRows || []).map(row => ({
+      id: crypto.randomUUID(),
+      payment_type: row.payment_type || "가계약금",
+      payment_round: row.payment_round || "",
+      amount: toNum(row.amount),
+      payment_date: row.payment_date || "",
+      note: row.note || ""
+    }));
+
+    if (companyProfitRows.length === 0) companyProfitRows = [buildEmptyCompanyProfitRow()];
+    if (companyPaymentRows.length === 0) companyPaymentRows = [buildEmptyPaymentRow()];
+
+    renderCompanyProfitRows();
+    renderPaymentRows();
+    refreshCompanySummary(toNum(quoteRow.total_amount));
+    calcMonthlyCompanyCost();
+    loadCompanyDashboards();
+  } catch (err) {
+    console.error("회사관리 자동동기화 실패:", err);
+  }
+}
+
+// ===============================
+// 집계
+// ===============================
 async function loadCompanyDashboards() {
   try {
     const { data: masters, error } = await db
@@ -998,10 +1254,15 @@ function renderYearSummary(rows) {
   box.innerHTML = html;
 }
 
+// ===============================
+// 초기화
+// ===============================
 function initCompanyTab() {
   if (companyProfitRows.length === 0) {
-    const imported = buildCompanyRowsFromDetail();
-    companyProfitRows = imported.length ? imported : [buildEmptyCompanyProfitRow()];
+    companyProfitRows = mergeCompanyRowsWithDetail([]);
+    if (companyProfitRows.length === 0) {
+      companyProfitRows = [buildEmptyCompanyProfitRow()];
+    }
   }
 
   if (companyPaymentRows.length === 0) {
@@ -1021,7 +1282,10 @@ function initCompanyTab() {
 
   renderCompanyProfitRows();
   renderPaymentRows();
-  refreshCompanySummary();
+
+  const totalAmountText = document.getElementById("total_amount_display")?.textContent || "0";
+  refreshCompanySummary(toNum(totalAmountText));
+
   calcMonthlyCompanyCost();
   loadMonthlyCompanyCostForCurrentMonth();
   loadCompanyDashboards();
