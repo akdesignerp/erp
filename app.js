@@ -309,6 +309,8 @@ document.addEventListener("keydown", (e) => {
       }
 
       updateComputedAmounts(row);
+
+syncAll();
       const amountEl = document.getElementById(`line_amount_${row.id}`);
       if (amountEl) amountEl.textContent = formatWon(row.line_amount);
 
@@ -1569,4 +1571,88 @@ async function syncConfirmedSiteAddressToOrderDb(quoteNo, quoteStatus, siteAddre
     console.error("발주 DB 주소 동기화 실패:", err);
     alert("발주 DB 주소 저장 실패: " + err.message);
   }
+}
+
+function syncAll() {
+  renderDetailInputTable();     // PC용
+  renderMobileDetailCards();    // 모바일용
+  renderPreviewTables();        // 요약/상세
+  refreshCompanySummary();      // 회사관리
+}
+
+
+function renderMobileDetailCards() {
+  const wrap = document.getElementById("mobileDetailInput");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  detailRows.forEach((row, index) => {
+
+    updateComputedAmounts(row);
+
+    wrap.insertAdjacentHTML("beforeend", `
+      <div class="detail-card">
+        
+        <div class="detail-card-title">
+          ${escapeHtml(row.work_name || "공정")}
+        </div>
+
+        <div class="detail-card-row">
+          <input placeholder="품목명"
+            value="${escapeHtml(row.item_name || "")}"
+            onchange="updateDetailRow(${index}, 'item_name', this.value)">
+        </div>
+
+        <div class="detail-card-row">
+          <input placeholder="규격"
+            value="${escapeHtml(row.spec || "")}"
+            onchange="updateDetailRow(${index}, 'spec', this.value)">
+          
+          <input placeholder="단위"
+            value="${escapeHtml(row.unit || "")}"
+            onchange="updateDetailRow(${index}, 'unit', this.value)">
+        </div>
+
+        <div class="detail-card-row">
+          <input type="number" placeholder="수량"
+            value="${row.qty || 0}"
+            onchange="updateDetailRow(${index}, 'qty', this.value)">
+        </div>
+
+        <div class="detail-card-row">
+          <input type="number" placeholder="자재비"
+            value="${row.cost_material || 0}"
+            onchange="updateDetailRow(${index}, 'cost_material', this.value)">
+          
+          <input type="number" placeholder="노무비"
+            value="${row.cost_labor || 0}"
+            onchange="updateDetailRow(${index}, 'cost_labor', this.value)">
+          
+          <input type="number" placeholder="경비"
+            value="${row.cost_expense || 0}"
+            onchange="updateDetailRow(${index}, 'cost_expense', this.value)">
+        </div>
+
+        <div class="detail-card-amount">
+          ${formatWon(row.line_amount)}
+        </div>
+
+        <div class="detail-card-delete">
+          <button onclick="removeDetailRow(${index})">삭제</button>
+        </div>
+
+      </div>
+    `);
+  });
+}
+
+function addDetailRow() {
+  detailRows.push(buildEmptyDetailRow());
+  syncAll();
+}
+
+function removeDetailRow(index) {
+  detailRows.splice(index, 1);
+  syncAll();
 }
