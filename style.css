@@ -1429,3 +1429,20 @@ text-align: right;
     grid-template-columns: 1fr;
   }
 }
+
+.pdf-divider-row td {
+  border-top: 2px solid #222;
+  height: 10px;
+  padding: 0;
+  background: #fff;
+}
+
+.pdf-detail-total-final td {
+  font-weight: 800;
+  background: #f3f3f3;
+}
+
+.pdf-summary-table td:first-child,
+.pdf-summary-table th:first-child {
+  text-align: center;
+}

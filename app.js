@@ -459,39 +459,27 @@ function renderPreviewTables() {
 
   if (summaryTotalsBox) {
     summaryTotalsBox.innerHTML = `
-      <div class="detail-total-row">
-        <span>직접공사비</span>
-        <strong>${formatWon(totals.directTotal)}</strong>
-      </div>
-      <div class="detail-total-row">
-        <span>기타공사비</span>
-        <strong>${formatWon(totals.extraCost)}</strong>
-      </div>
-      <div class="detail-total-row">
-        <span>폐기물비용</span>
-        <strong>${formatWon(totals.wasteCost)}</strong>
-      </div>
-      <div class="detail-total-row">
-        <span>산재보험비</span>
-        <strong>${formatWon(totals.insuranceCost)}</strong>
-      </div>
-      <div class="detail-total-row">
-        <span>현장관리비</span>
-        <strong>${formatWon(totals.siteManageCost)}</strong>
-      </div>
-      <div class="detail-total-row">
-        <span>공급가액</span>
-        <strong>${formatWon(totals.totalConstruction)}</strong>
-      </div>
-      <div class="detail-total-row">
-        <span>VAT</span>
-        <strong>${formatWon(totals.vat)}</strong>
-      </div>
-      <div class="detail-total-row grand">
-        <span>총 합 계</span>
-        <strong>${formatWon(totals.finalTotal)}</strong>
-      </div>
-    `;
+  <div class="detail-total-row">
+    <span>직접공사비</span>
+    <strong>${formatWon(totals.directTotal)}</strong>
+  </div>
+  <div class="detail-total-row">
+    <span>간접공사비</span>
+    <strong>${formatWon(totals.indirectTotal)}</strong>
+  </div>
+  <div class="detail-total-row">
+    <span>공급가액</span>
+    <strong>${formatWon(totals.totalConstruction)}</strong>
+  </div>
+  <div class="detail-total-row">
+    <span>VAT</span>
+    <strong>${formatWon(totals.vat)}</strong>
+  </div>
+  <div class="detail-total-row grand">
+    <span>총 합 계</span>
+    <strong>${formatWon(totals.finalTotal)}</strong>
+  </div>
+`;
   }
 
   // 견적상세
@@ -1253,6 +1241,7 @@ function buildPdfDetailTable() {
   pdfBody.innerHTML = "";
 
   const groupedEntries = getDetailPreviewData();
+  const totals = getQuoteTotals();
 
   if (!groupedEntries.length) {
     pdfBody.innerHTML = `<tr><td colspan="7" class="center">견적 상세 내역이 없습니다.</td></tr>`;
@@ -1270,12 +1259,14 @@ function buildPdfDetailTable() {
 
     rows.forEach((row, idx) => {
       updateComputedAmounts(row);
+
       const itemName = escapeHtml(row.item_name || "-");
       const spec = escapeHtml(row.spec || "-");
       const unit = escapeHtml(row.unit || "-");
       const qty = toNum(row.qty).toLocaleString("ko-KR");
       const amount = formatWon(row.line_amount);
       const note = escapeHtml(row.note || "");
+
       subtotal += toNum(row.line_amount);
 
       pdfBody.insertAdjacentHTML("beforeend", `
@@ -1303,6 +1294,57 @@ function buildPdfDetailTable() {
       </tr>
     `);
   });
+
+  // 하단 구분선
+  pdfBody.insertAdjacentHTML("beforeend", `
+    <tr class="pdf-divider-row">
+      <td colspan="7"></td>
+    </tr>
+  `);
+
+  // 하단 합계영역
+  pdfBody.insertAdjacentHTML("beforeend", `
+    <tr class="pdf-subtotal-row">
+      <td colspan="5" class="right">직접공사비</td>
+      <td class="right pdf-amount">${formatWon(totals.directTotal)}</td>
+      <td></td>
+    </tr>
+    <tr class="pdf-subtotal-row">
+      <td colspan="5" class="right">기타공사비</td>
+      <td class="right pdf-amount">${formatWon(totals.extraCost)}</td>
+      <td></td>
+    </tr>
+    <tr class="pdf-subtotal-row">
+      <td colspan="5" class="right">폐기물비용</td>
+      <td class="right pdf-amount">${formatWon(totals.wasteCost)}</td>
+      <td></td>
+    </tr>
+    <tr class="pdf-subtotal-row">
+      <td colspan="5" class="right">산재보험비</td>
+      <td class="right pdf-amount">${formatWon(totals.insuranceCost)}</td>
+      <td></td>
+    </tr>
+    <tr class="pdf-subtotal-row">
+      <td colspan="5" class="right">현장관리비</td>
+      <td class="right pdf-amount">${formatWon(totals.siteManageCost)}</td>
+      <td></td>
+    </tr>
+    <tr class="pdf-subtotal-row">
+      <td colspan="5" class="right">공급가액</td>
+      <td class="right pdf-amount">${formatWon(totals.totalConstruction)}</td>
+      <td></td>
+    </tr>
+    <tr class="pdf-subtotal-row">
+      <td colspan="5" class="right">VAT</td>
+      <td class="right pdf-amount">${formatWon(totals.vat)}</td>
+      <td></td>
+    </tr>
+    <tr class="pdf-subtotal-row pdf-detail-total-final">
+      <td colspan="5" class="right"><strong>총 합 계</strong></td>
+      <td class="right pdf-amount"><strong>${formatWon(totals.finalTotal)}</strong></td>
+      <td></td>
+    </tr>
+  `);
 }
 
 function fillPdfData() {
@@ -1338,10 +1380,8 @@ function fillPdfData() {
 
   // 직접공사비는 다시 더하지 말고 getQuoteTotals 값 그대로 사용
   document.getElementById("pdf_direct_cost").textContent = formatWon(amounts.directTotal);
-  document.getElementById("pdf_extra_cost").textContent = formatWon(amounts.extraCost);
-  document.getElementById("pdf_waste_cost").textContent = formatWon(amounts.wasteCost);
-  document.getElementById("pdf_insurance_cost").textContent = formatWon(amounts.insuranceCost);
-  document.getElementById("pdf_site_manage_cost").textContent = formatWon(amounts.siteManageCost);
+  document.getElementById("pdf_extra_cost").textContent = formatWon(amounts.indirectTotal);
+
 
   // 여기 이름을 getQuoteTotals 반환값에 맞춰야 함
   document.getElementById("pdf_supply_amount").textContent = formatWon(amounts.totalConstruction);
