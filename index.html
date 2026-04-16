@@ -194,7 +194,25 @@
 <div id="tab-summary" class="hidden">
   <div class="card">
     <div class="card-header">견적요약</div>
-    <div class="card-body"><div class="work-summary-list" id="summaryTabList"></div></div>
+    <div class="card-body">
+      <div class="summary-responsive-wrap">
+        <table id="summaryPreviewTable" class="summary-responsive-table">
+          <colgroup>
+            <col style="width:auto;">
+            <col style="width:140px;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>공정명</th>
+              <th>금액</th>
+            </tr>
+          </thead>
+          <tbody id="summaryPreviewBody"></tbody>
+        </table>
+      </div>
+
+      <div id="summaryTotalsBox" class="detail-total-box"></div>
+    </div>
   </div>
 </div>
 
@@ -202,11 +220,16 @@
   <div class="card">
     <div class="card-header">견적상세</div>
     <div class="card-body">
-      <div class="table-wrap">
-        <table id="detailPreviewTable" style="width:100%; border-collapse:collapse;">
+      <div class="detail-responsive-wrap">
+        <table id="detailPreviewTable" class="detail-responsive-table">
           <colgroup>
-            <col style="width:70px;"><col style="width:280px;"><col style="width:160px;"><col style="width:120px;">
-            <col style="width:120px;"><col style="width:180px;"><col style="width:auto;">
+            <col style="width:52px;">
+            <col style="width:auto;">
+            <col style="width:88px;">
+            <col style="width:70px;">
+            <col style="width:72px;">
+            <col style="width:110px;">
+            <col style="width:90px;">
           </colgroup>
           <thead>
             <tr>
@@ -233,27 +256,27 @@
 
       <div class="summary-strip" style="margin-bottom:16px;">
         <div class="mini-card">
-          <div class="label">총매출</div>
+          <div class="label">총고객매출</div>
           <div class="value" id="companyTotalSales">₩ 0</div>
         </div>
         <div class="mini-card">
-          <div class="label">총예상매입</div>
+          <div class="label">총업체단가</div>
           <div class="value" id="companyTotalEstimatedCost">₩ 0</div>
         </div>
         <div class="mini-card">
-          <div class="label">총실매입</div>
+          <div class="label">총업체입금액</div>
           <div class="value" id="companyTotalActualCost">₩ 0</div>
         </div>
         <div class="mini-card">
-          <div class="label">예상이익</div>
+          <div class="label">예정이익</div>
           <div class="value" id="companyTotalEstimatedProfit">₩ 0</div>
         </div>
         <div class="mini-card">
-          <div class="label">실이익</div>
+          <div class="label">실수익</div>
           <div class="value" id="companyTotalActualProfit">₩ 0</div>
         </div>
         <div class="mini-card">
-          <div class="label">총입금액</div>
+          <div class="label">총고객입금액</div>
           <div class="value" id="companyTotalReceived">₩ 0</div>
         </div>
       </div>
@@ -267,28 +290,28 @@
   <button class="btn-light" onclick="saveCompanyProfit()">회사수익 저장</button>
 
 </div>
-          <div class="table-wrap">
-            <table style="min-width:1800px;">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>구분</th>
-                  <th>항목명</th>
-                  <th>고객견적가</th>
-                  <th>노무비(업체)</th>
-                  <th>자재비(업체)</th>
-                  <th>경비(업체)</th>
-                  <th>총예상매입</th>
-                  <th>지급액</th>
-                  <th>예상이익</th>
-                  <th>실이익</th>
-                  <th>비고</th>
-                  <th>삭제</th>
-                </tr>
-              </thead>
-              <tbody id="companyProfitBody"></tbody>
-            </table>
-          </div>
+         <div class="table-wrap company-responsive-wrap">
+  <table class="company-responsive-table company-profit-table">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>구분</th>
+        <th>항목명</th>
+        <th>고객견적가</th>
+        <th>노무비(업체)</th>
+        <th>자재비(업체)</th>
+        <th>경비(업체)</th>
+        <th>총예상매입</th>
+        <th>지급액</th>
+        <th>예상이익</th>
+        <th>실이익</th>
+        <th>비고</th>
+        <th>삭제</th>
+      </tr>
+    </thead>
+    <tbody id="companyProfitBody"></tbody>
+  </table>
+</div>
         </div>
       </div>
 
@@ -300,22 +323,22 @@
             <button class="btn-light" onclick="savePayments()">입금내역 저장</button>
           </div>
 
-          <div class="table-wrap">
-            <table style="min-width:1200px;">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>구분</th>
-                  <th>회차</th>
-                  <th>금액</th>
-                  <th>입금일</th>
-                  <th>비고</th>
-                  <th>삭제</th>
-                </tr>
-              </thead>
-              <tbody id="companyPaymentBody"></tbody>
-            </table>
-          </div>
+          <div class="table-wrap company-responsive-wrap">
+  <table class="company-responsive-table company-payment-table">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>구분</th>
+        <th>회차</th>
+        <th>금액</th>
+        <th>입금일</th>
+        <th>비고</th>
+        <th>삭제</th>
+      </tr>
+    </thead>
+    <tbody id="companyPaymentBody"></tbody>
+  </table>
+</div>
         </div>
       </div>
 

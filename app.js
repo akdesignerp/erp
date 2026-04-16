@@ -100,7 +100,7 @@ document.addEventListener("keydown", (e) => {
     }
 
     function toNum(v) {
-      return Number(String(v ?? "").replace(/,/g, "").trim()) || 0;
+      return Number(String(v ?? "").replace(/[^\d.-]/g, "").trim()) || 0;
     }
 
     function escapeHtml(value) {
@@ -122,30 +122,107 @@ document.addEventListener("keydown", (e) => {
       return idx === -1 ? 9999 : idx;
     }
 
-    function showTab(tabName) {
-      document.getElementById("tab-write").classList.add("hidden");
-      document.getElementById("tab-summary").classList.add("hidden");
-      document.getElementById("tab-detail").classList.add("hidden");
-      document.getElementById("tab-company").classList.add("hidden");
-      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
 
-      if (tabName === "write") {
-        document.getElementById("tab-write").classList.remove("hidden");
-        document.querySelectorAll(".tab-btn")[0].classList.add("active");
-      } else if (tabName === "summary") {
-        document.getElementById("tab-summary").classList.remove("hidden");
-        document.querySelectorAll(".tab-btn")[1].classList.add("active");
-      } else if (tabName === "detail") {
-        document.getElementById("tab-detail").classList.remove("hidden");
-        document.querySelectorAll(".tab-btn")[2].classList.add("active");
-    } else if (tabName === "company") {
-  document.getElementById("tab-company").classList.remove("hidden");
-  document.querySelectorAll(".tab-btn")[3].classList.add("active");
+    function getQuoteTotals() {
+      let directTotal = 0;
 
-  if (typeof initCompanyTab === "function") {
-    initCompanyTab();
+      (detailRows || []).forEach(row => {
+        if (!isMeaningfulRow(row)) return;
+        updateComputedAmounts(row);
+        directTotal += toNum(row.line_amount);
+      });
+
+      const extraCost = toNum(document.getElementById("extra_cost")?.value);
+      const wasteCost = toNum(document.getElementById("waste_cost")?.value);
+      const insuranceCost = toNum(document.getElementById("insurance_cost")?.value);
+      const siteManageCost = toNum(document.getElementById("site_manage_cost")?.value);
+      const vatType = toNum(document.getElementById("vat_type")?.value || 10);
+
+      const indirectTotal = extraCost + wasteCost + insuranceCost + siteManageCost;
+      const totalConstruction = directTotal + indirectTotal;
+      const vat = Math.round(totalConstruction * (vatType / 100));
+      const finalTotal = totalConstruction + vat;
+
+      return {
+        directTotal,
+        indirectTotal,
+        totalConstruction,
+        vat,
+        finalTotal,
+        extraCost,
+        wasteCost,
+        insuranceCost,
+        siteManageCost
+      };
+    }
+
+    function getWorkSummaryData() {
+      const groupedMap = new Map();
+
+      (detailRows || [])
+        .filter(isMeaningfulRow)
+        .forEach(row => {
+          updateComputedAmounts(row);
+
+          const workName = String(row.work_name || "미분류").trim() || "미분류";
+          if (!groupedMap.has(workName)) groupedMap.set(workName, 0);
+          groupedMap.set(workName, groupedMap.get(workName) + toNum(row.line_amount));
+        });
+
+      return Array.from(groupedMap.entries()).sort((a, b) => {
+        const orderA = getWorkOrderIndex(a[0]);
+        const orderB = getWorkOrderIndex(b[0]);
+        if (orderA !== orderB) return orderA - orderB;
+        return a[0].localeCompare(b[0], "ko");
+      });
+    }
+
+    function getDetailPreviewData() {
+      const groupedMap = new Map();
+
+      (detailRows || [])
+        .filter(isMeaningfulRow)
+        .forEach(row => {
+          updateComputedAmounts(row);
+          const workName = String(row.work_name || "미분류").trim() || "미분류";
+          if (!groupedMap.has(workName)) groupedMap.set(workName, []);
+          groupedMap.get(workName).push(row);
+        });
+
+      return Array.from(groupedMap.entries()).sort((a, b) => {
+        const orderA = getWorkOrderIndex(a[0]);
+        const orderB = getWorkOrderIndex(b[0]);
+        if (orderA !== orderB) return orderA - orderB;
+        return a[0].localeCompare(b[0], "ko");
+      });
+    }
+
+   function showTab(tabName) {
+  document.getElementById("tab-write").classList.add("hidden");
+  document.getElementById("tab-summary").classList.add("hidden");
+  document.getElementById("tab-detail").classList.add("hidden");
+  document.getElementById("tab-company").classList.add("hidden");
+  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+
+  if (tabName === "write") {
+    document.getElementById("tab-write").classList.remove("hidden");
+    document.querySelectorAll(".tab-btn")[0].classList.add("active");
+  } else if (tabName === "summary") {
+    document.getElementById("tab-summary").classList.remove("hidden");
+    document.querySelectorAll(".tab-btn")[1].classList.add("active");
+    renderPreviewTables();
+  } else if (tabName === "detail") {
+    document.getElementById("tab-detail").classList.remove("hidden");
+    document.querySelectorAll(".tab-btn")[2].classList.add("active");
+    renderPreviewTables();
+  } else if (tabName === "company") {
+    document.getElementById("tab-company").classList.remove("hidden");
+    document.querySelectorAll(".tab-btn")[3].classList.add("active");
+
+    if (typeof initCompanyTab === "function") {
+      initCompanyTab();
+    }
   }
-}
 }
     function buildEmptyRow() {
       return {
@@ -350,128 +427,195 @@ document.addEventListener("keydown", (e) => {
 }
 
 function renderPreviewTables() {
+  const summaryPreviewBody = document.getElementById("summaryPreviewBody");
+  const summaryTotalsBox = document.getElementById("summaryTotalsBox");
   const previewBody = document.getElementById("detailPreviewBody");
-  previewBody.innerHTML = "";
 
-  const meaningfulRows = detailRows.filter(isMeaningfulRow).map(row => {
-    updateComputedAmounts(row);
-    return row;
-  });
+  const summaryData = getWorkSummaryData();
+  const groupedEntries = getDetailPreviewData();
+  const totals = getQuoteTotals();
 
-  if (meaningfulRows.length === 0) {
-    previewBody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align:center;">입력된 견적상세가 없습니다.</td>
-      </tr>
-    `;
-    return;
+  // 견적요약
+  if (summaryPreviewBody) {
+    summaryPreviewBody.innerHTML = "";
+
+    if (!summaryData.length) {
+      summaryPreviewBody.innerHTML = `
+        <tr>
+          <td colspan="2" class="align-center">견적 요약 내역이 없습니다.</td>
+        </tr>
+      `;
+    } else {
+      summaryData.forEach(([workName, amount]) => {
+        summaryPreviewBody.insertAdjacentHTML("beforeend", `
+          <tr>
+            <td>${escapeHtml(workName)}</td>
+            <td class="align-right">${formatWon(amount)}</td>
+          </tr>
+        `);
+      });
+    }
   }
 
-  const groupedMap = new Map();
-  meaningfulRows.forEach(row => {
-    const workName = String(row.work_name || "미분류").trim() || "미분류";
-    if (!groupedMap.has(workName)) groupedMap.set(workName, []);
-    groupedMap.get(workName).push(row);
-  });
+  if (summaryTotalsBox) {
+    summaryTotalsBox.innerHTML = `
+      <div class="detail-total-row">
+        <span>직접공사비</span>
+        <strong>${formatWon(totals.directTotal)}</strong>
+      </div>
+      <div class="detail-total-row">
+        <span>기타공사비</span>
+        <strong>${formatWon(totals.extraCost)}</strong>
+      </div>
+      <div class="detail-total-row">
+        <span>폐기물비용</span>
+        <strong>${formatWon(totals.wasteCost)}</strong>
+      </div>
+      <div class="detail-total-row">
+        <span>산재보험비</span>
+        <strong>${formatWon(totals.insuranceCost)}</strong>
+      </div>
+      <div class="detail-total-row">
+        <span>현장관리비</span>
+        <strong>${formatWon(totals.siteManageCost)}</strong>
+      </div>
+      <div class="detail-total-row">
+        <span>공급가액</span>
+        <strong>${formatWon(totals.totalConstruction)}</strong>
+      </div>
+      <div class="detail-total-row">
+        <span>VAT</span>
+        <strong>${formatWon(totals.vat)}</strong>
+      </div>
+      <div class="detail-total-row grand">
+        <span>총 합 계</span>
+        <strong>${formatWon(totals.finalTotal)}</strong>
+      </div>
+    `;
+  }
 
-  const groupedEntries = Array.from(groupedMap.entries()).sort((a, b) => {
-    const orderA = getWorkOrderIndex(a[0]);
-    const orderB = getWorkOrderIndex(b[0]);
-    if (orderA !== orderB) return orderA - orderB;
-    return a[0].localeCompare(b[0], "ko");
-  });
+  // 견적상세
+  if (previewBody) {
+    previewBody.innerHTML = "";
 
-  groupedEntries.forEach(([workName, rows]) => {
-    let subtotal = 0;
-
-    previewBody.insertAdjacentHTML(
-      "beforeend",
-      `
-      <tr class="preview-group-row">
-        <td colspan="7">${escapeHtml(workName)}</td>
-      </tr>
-      `
-    );
-
-    rows.forEach((row, idx) => {
-      subtotal += toNum(row.line_amount);
-      previewBody.insertAdjacentHTML(
-        "beforeend",
-        `
+    if (!groupedEntries.length) {
+      previewBody.innerHTML = `
         <tr>
-          <td class="align-center">${idx + 1}</td>
-          <td class="align-center">${escapeHtml(row.item_name || "-")}</td>
-          <td class="align-center">${escapeHtml(row.spec || "-")}</td>
-          <td class="align-center">${escapeHtml(row.unit || "-")}</td>
-          <td class="align-right">${toNum(row.qty).toLocaleString("ko-KR")}</td>
-          <td class="align-right">${formatWon(row.line_amount)}</td>
-          <td>${escapeHtml(row.note || "")}</td>
+          <td colspan="7" style="text-align:center;">입력된 견적상세가 없습니다.</td>
         </tr>
-        `
-      );
+      `;
+      return;
+    }
+
+    groupedEntries.forEach(([workName, rows]) => {
+      let subtotal = 0;
+
+      previewBody.insertAdjacentHTML("beforeend", `
+        <tr class="preview-group-row">
+          <td colspan="7">${escapeHtml(workName)}</td>
+        </tr>
+      `);
+
+      rows.forEach((row, idx) => {
+        subtotal += toNum(row.line_amount);
+
+        previewBody.insertAdjacentHTML("beforeend", `
+          <tr>
+            <td class="align-center">${idx + 1}</td>
+            <td>${escapeHtml(row.item_name || "-")}</td>
+            <td class="align-center">${escapeHtml(row.spec || "-")}</td>
+            <td class="align-center">${escapeHtml(row.unit || "-")}</td>
+            <td class="align-right">${toNum(row.qty).toLocaleString("ko-KR")}</td>
+            <td class="align-right">${formatWon(row.line_amount)}</td>
+            <td class="align-center">${escapeHtml(row.note || "")}</td>
+          </tr>
+        `);
+      });
+
+      previewBody.insertAdjacentHTML("beforeend", `
+        <tr class="preview-subtotal-row">
+          <td colspan="5" class="align-right">${escapeHtml(workName)} 소계</td>
+          <td class="align-right">${formatWon(subtotal)}</td>
+          <td></td>
+        </tr>
+      `);
     });
 
-    previewBody.insertAdjacentHTML(
-      "beforeend",
-      `
+    previewBody.insertAdjacentHTML("beforeend", `
+      <tr class="preview-divider-row">
+        <td colspan="7"></td>
+      </tr>
+
       <tr class="preview-subtotal-row">
-        <td colspan="5" class="align-right">${escapeHtml(workName)} 소계</td>
-        <td class="align-right">${formatWon(subtotal)}</td>
+        <td colspan="5" class="align-right">직접공사비</td>
+        <td class="align-right">${formatWon(totals.directTotal)}</td>
         <td></td>
       </tr>
-      `
-    );
-  });
+      <tr class="preview-subtotal-row">
+        <td colspan="5" class="align-right">기타공사비</td>
+        <td class="align-right">${formatWon(totals.extraCost)}</td>
+        <td></td>
+      </tr>
+      <tr class="preview-subtotal-row">
+        <td colspan="5" class="align-right">폐기물비용</td>
+        <td class="align-right">${formatWon(totals.wasteCost)}</td>
+        <td></td>
+      </tr>
+      <tr class="preview-subtotal-row">
+        <td colspan="5" class="align-right">산재보험비</td>
+        <td class="align-right">${formatWon(totals.insuranceCost)}</td>
+        <td></td>
+      </tr>
+      <tr class="preview-subtotal-row">
+        <td colspan="5" class="align-right">현장관리비</td>
+        <td class="align-right">${formatWon(totals.siteManageCost)}</td>
+        <td></td>
+      </tr>
+      <tr class="preview-subtotal-row">
+        <td colspan="5" class="align-right">공급가액</td>
+        <td class="align-right">${formatWon(totals.totalConstruction)}</td>
+        <td></td>
+      </tr>
+      <tr class="preview-subtotal-row">
+        <td colspan="5" class="align-right">VAT</td>
+        <td class="align-right">${formatWon(totals.vat)}</td>
+        <td></td>
+      </tr>
+      <tr class="preview-subtotal-row">
+        <td colspan="5" class="align-right"><strong>총 합 계</strong></td>
+        <td class="align-right"><strong>${formatWon(totals.finalTotal)}</strong></td>
+        <td></td>
+      </tr>
+    `);
+  }
 }
 
+
 function calculateAll() {
-  let directCost = 0;
-  let workSummary = {};
+  const totals = getQuoteTotals();
+  const workSummary = Object.fromEntries(getWorkSummaryData());
 
-  detailRows.forEach(row => {
-    updateComputedAmounts(row);
-    const line = toNum(row.line_amount);
-    directCost += line;
-
-    const workName = row.work_name || "미분류";
-    if (!workSummary[workName]) workSummary[workName] = 0;
-    workSummary[workName] += line;
-  });
-
-  const extraCost = toNum(document.getElementById("extra_cost").value);
-  const wasteCost = toNum(document.getElementById("waste_cost").value);
-  const insuranceCost = toNum(document.getElementById("insurance_cost").value);
-  const siteManageCost = toNum(document.getElementById("site_manage_cost").value);
-  const vatType = toNum(document.getElementById("vat_type").value);
-
-  const indirectCost = extraCost + wasteCost + insuranceCost + siteManageCost;
-  const supplyAmount = directCost + indirectCost;
-  const vatAmount = Math.round(supplyAmount * (vatType / 100));
-  const totalAmount = supplyAmount + vatAmount;
-
-  document.getElementById("direct_cost_display").textContent = formatWon(directCost);
-  document.getElementById("indirect_cost_display").textContent = formatWon(indirectCost);
-  document.getElementById("supply_amount_display").textContent = formatWon(supplyAmount);
-  document.getElementById("vat_amount_display").textContent = formatWon(vatAmount);
-  document.getElementById("total_amount_display").textContent = formatWon(totalAmount);
+  document.getElementById("direct_cost_display").textContent = formatWon(totals.directTotal);
+  document.getElementById("indirect_cost_display").textContent = formatWon(totals.indirectTotal);
+  document.getElementById("supply_amount_display").textContent = formatWon(totals.totalConstruction);
+  document.getElementById("vat_amount_display").textContent = formatWon(totals.vat);
+  document.getElementById("total_amount_display").textContent = formatWon(totals.finalTotal);
 
   const workSummaryList = document.getElementById("workSummaryList");
-  const summaryTabList = document.getElementById("summaryTabList");
-  workSummaryList.innerHTML = "";
-  summaryTabList.innerHTML = "";
-
-  const keys = Object.keys(workSummary).filter(k => workSummary[k] !== 0);
-  if (keys.length === 0) {
-    const emptyHtml = `<div class="work-summary-item"><span>입력된 공종이 없습니다</span><strong>₩ 0</strong></div>`;
-    workSummaryList.innerHTML = emptyHtml;
-    summaryTabList.innerHTML = emptyHtml;
-  } else {
-    keys.forEach(key => {
-      const html = `<div class="work-summary-item"><span>${escapeHtml(key)}</span><strong>${formatWon(workSummary[key])}</strong></div>`;
-      workSummaryList.insertAdjacentHTML("beforeend", html);
-      summaryTabList.insertAdjacentHTML("beforeend", html);
-    });
+  if (workSummaryList) {
+    workSummaryList.innerHTML = "";
+    const keys = Object.keys(workSummary).filter(k => workSummary[k] !== 0);
+    if (keys.length === 0) {
+      workSummaryList.innerHTML = `<div class="work-summary-item"><span>입력된 공종이 없습니다</span><strong>₩ 0</strong></div>`;
+    } else {
+      keys.forEach(key => {
+        const html = `<div class="work-summary-item"><span>${escapeHtml(key)}</span><strong>${formatWon(workSummary[key])}</strong></div>`;
+        workSummaryList.insertAdjacentHTML("beforeend", html);
+      });
+    }
   }
+
+  renderPreviewTables();
 }
 
 function syncTopSummary() {
@@ -797,6 +941,7 @@ async function ensureMaterial(row, workTypeId) {
 }
 
 async function saveQuote() {
+
   try {
     const quote_no = document.getElementById("quote_no").value.trim();
     const quote_date = document.getElementById("quote_date").value;
@@ -806,7 +951,14 @@ async function saveQuote() {
 
     if (!quote_no) return alert("견적번호가 없습니다.");
     if (!quote_date) return alert("견적일자를 입력하세요.");
-    if (!document.getElementById("customer_name").value.trim()) return alert("고객명을 입력하세요.");
+
+   const customerName = document.getElementById("customer_name").value.trim();
+const customerSelectValue = document.getElementById("customer_select")?.value || "";
+
+if (!customerName && !customerSelectValue) {
+  return alert("고객명을 입력하세요.");
+}
+
     if (!document.getElementById("site_address").value.trim()) return alert("현장주소를 입력하세요.");
 
     const validItems = detailRows.filter(isMeaningfulRow);
@@ -905,10 +1057,19 @@ site_manage_cost: toNum(document.getElementById("site_manage_cost").value),
     const { error: itemsInsertError } = await db.from("quote_items").insert(itemPayloads);
     if (itemsInsertError) throw itemsInsertError;
 
-   await loadCustomers();
-await loadSites();
+   await loadSites();
+
 await loadWorkTypes();
+
 await loadMaterials();
+
+
+
+await syncConfirmedSiteAddressToOrderDb(
+  quote_no,
+  quote_status,
+  document.getElementById("site_address").value.trim()
+);
 
 if (typeof saveCompanyDataFromQuote === "function") {
   await saveCompanyDataFromQuote();
@@ -1070,31 +1231,14 @@ function buildPdfSummaryTable() {
   const body = document.getElementById("pdfSummaryBody");
   body.innerHTML = "";
 
-  const meaningfulRows = (detailRows || []).filter(row => {
-    updateComputedAmounts(row);
-    return isMeaningfulRow(row);
-  });
+  const summaryData = getWorkSummaryData();
 
-  if (!meaningfulRows.length) {
+  if (!summaryData.length) {
     body.innerHTML = `<tr><td colspan="2" class="center">견적 요약 내역이 없습니다.</td></tr>`;
     return;
   }
 
-  const groupedMap = new Map();
-  meaningfulRows.forEach(row => {
-    const workName = String(row.work_name || "미분류").trim() || "미분류";
-    if (!groupedMap.has(workName)) groupedMap.set(workName, 0);
-    groupedMap.set(workName, groupedMap.get(workName) + toNum(row.line_amount));
-  });
-
-  const groupedEntries = Array.from(groupedMap.entries()).sort((a, b) => {
-    const orderA = getWorkOrderIndex(a[0]);
-    const orderB = getWorkOrderIndex(b[0]);
-    if (orderA !== orderB) return orderA - orderB;
-    return a[0].localeCompare(b[0], "ko");
-  });
-
-  groupedEntries.forEach(([workName, amount]) => {
+  summaryData.forEach(([workName, amount]) => {
     body.insertAdjacentHTML("beforeend", `
       <tr>
         <td>${escapeHtml(workName)}</td>
@@ -1108,29 +1252,12 @@ function buildPdfDetailTable() {
   const pdfBody = document.getElementById("pdfDetailBody");
   pdfBody.innerHTML = "";
 
-  const meaningfulRows = detailRows.filter(isMeaningfulRow).map(row => {
-    updateComputedAmounts(row);
-    return row;
-  });
+  const groupedEntries = getDetailPreviewData();
 
-  if (meaningfulRows.length === 0) {
+  if (!groupedEntries.length) {
     pdfBody.innerHTML = `<tr><td colspan="7" class="center">견적 상세 내역이 없습니다.</td></tr>`;
     return;
   }
-
-  const groupedMap = new Map();
-  meaningfulRows.forEach(row => {
-    const workName = String(row.work_name || "미분류").trim() || "미분류";
-    if (!groupedMap.has(workName)) groupedMap.set(workName, []);
-    groupedMap.get(workName).push(row);
-  });
-
-  const groupedEntries = Array.from(groupedMap.entries()).sort((a, b) => {
-    const orderA = getWorkOrderIndex(a[0]);
-    const orderB = getWorkOrderIndex(b[0]);
-    if (orderA !== orderB) return orderA - orderB;
-    return a[0].localeCompare(b[0], "ko");
-  });
 
   groupedEntries.forEach(([workName, rows]) => {
     let subtotal = 0;
@@ -1179,7 +1306,7 @@ function buildPdfDetailTable() {
 }
 
 function fillPdfData() {
-  const amounts = getCurrentAmounts();
+  const amounts = getQuoteTotals();
 
   const quoteNo = document.getElementById("quote_no").value || "-";
   const quoteDate = document.getElementById("quote_date").value || "-";
@@ -1194,45 +1321,39 @@ function fillPdfData() {
   document.getElementById("cover_quote_no").textContent = quoteNo;
   document.getElementById("cover_quote_date").textContent = quoteDate;
   document.getElementById("cover_customer_name").textContent = customerName;
-document.getElementById("cover_customer_phone").textContent = customerPhone;
+  document.getElementById("cover_customer_phone").textContent = customerPhone;
   document.getElementById("cover_site_name").textContent = siteName;
   document.getElementById("cover_site_address").textContent = siteAddress;
   document.getElementById("cover_work_type").textContent = workType;
-  
-document.getElementById("summary_customer_name").textContent = customerName;
-  document.getElementById("summary_site_address").textContent = siteAddress;
- document.getElementById("summary_quote_no").textContent = quoteNo;
-document.getElementById("summary_quote_date").textContent = quoteDate;
 
+  document.getElementById("summary_customer_name").textContent = customerName;
+  document.getElementById("summary_site_address").textContent = siteAddress;
+  document.getElementById("summary_quote_no").textContent = quoteNo;
+  document.getElementById("summary_quote_date").textContent = quoteDate;
 
   document.getElementById("pdf_quote_no").textContent = quoteNo;
   document.getElementById("pdf_quote_date").textContent = quoteDate;
   document.getElementById("pdf_customer_name").textContent = customerName;
-  
- 
   document.getElementById("pdf_site_address").textContent = siteAddress;
-  
-  
 
-  let directCost = 0;
-  detailRows.filter(isMeaningfulRow).forEach(row => {
-    updateComputedAmounts(row);
-    directCost += toNum(row.line_amount);
-  });
+  // 직접공사비는 다시 더하지 말고 getQuoteTotals 값 그대로 사용
+  document.getElementById("pdf_direct_cost").textContent = formatWon(amounts.directTotal);
+  document.getElementById("pdf_extra_cost").textContent = formatWon(amounts.extraCost);
+  document.getElementById("pdf_waste_cost").textContent = formatWon(amounts.wasteCost);
+  document.getElementById("pdf_insurance_cost").textContent = formatWon(amounts.insuranceCost);
+  document.getElementById("pdf_site_manage_cost").textContent = formatWon(amounts.siteManageCost);
 
-  document.getElementById("pdf_direct_cost").textContent = formatWon(directCost);
-  document.getElementById("pdf_extra_cost").textContent = formatWon(toNum(document.getElementById("extra_cost").value));
-  document.getElementById("pdf_waste_cost").textContent = formatWon(toNum(document.getElementById("waste_cost").value));
-  document.getElementById("pdf_insurance_cost").textContent = formatWon(toNum(document.getElementById("insurance_cost").value));
-  document.getElementById("pdf_site_manage_cost").textContent = formatWon(toNum(document.getElementById("site_manage_cost").value));
-  document.getElementById("pdf_supply_amount").textContent = formatWon(amounts.supplyAmount);
-  document.getElementById("pdf_vat_amount").textContent = formatWon(amounts.vatAmount);
-  document.getElementById("pdf_total_amount").textContent = formatWon(amounts.totalAmount);
+  // 여기 이름을 getQuoteTotals 반환값에 맞춰야 함
+  document.getElementById("pdf_supply_amount").textContent = formatWon(amounts.totalConstruction);
+  document.getElementById("pdf_vat_amount").textContent = formatWon(amounts.vat);
+  document.getElementById("pdf_total_amount").textContent = formatWon(amounts.finalTotal);
+
   document.getElementById("pdf_quote_memo").textContent = memo;
 
   buildPdfSummaryTable();
   buildPdfDetailTable();
 }
+
 
 function printQuote() {
   try {
@@ -1357,5 +1478,55 @@ async function updateMaterialMasterFromRow(rowId) {
   } catch (err) {
     console.error(err);
     alert("단가수정 실패: " + err.message);
+  }
+}
+
+
+const ORDER_DB_URL = "https://gmqjbkqttkkotvvjnsiz.supabase.co";
+const ORDER_DB_KEY = "sb_publishable_NGNO5UWtbkgCWQQ6jwTe6Q_4evcuVD9";
+const orderDb = window.supabase.createClient(ORDER_DB_URL, ORDER_DB_KEY);
+
+
+async function syncConfirmedSiteAddressToOrderDb(quoteNo, quoteStatus, siteAddress) {
+  try {
+  
+
+    const normalizedStatus = String(quoteStatus || "").trim();
+    const normalizedAddress = String(siteAddress || "").trim();
+
+  
+
+    if (normalizedStatus !== "확정견적") {
+           return;
+    }
+
+    if (!normalizedAddress) {
+           return;
+    }
+
+    const payload = {
+      estimate_quote_no: String(quoteNo || "").trim(),
+      site_address: normalizedAddress,
+      updated_at: new Date().toISOString()
+    };
+
+   
+
+    const { data, error } = await orderDb
+      .from("order_sites")
+      .upsert([payload], { onConflict: "site_address" })
+      .select();
+
+    if (error) {
+      alert("upsert 에러: " + error.message);
+      throw error;
+    }
+
+    
+    console.log("order_sites 저장 결과", data);
+
+  } catch (err) {
+    console.error("발주 DB 주소 동기화 실패:", err);
+    alert("발주 DB 주소 저장 실패: " + err.message);
   }
 }

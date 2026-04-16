@@ -782,6 +782,7 @@ async function saveCompanyDataFromQuote() {
   if (!quoteRow) return;
 
   const totalSales = toNum(quoteRow.total_amount);
+  currentQuoteTotalAmount = totalSales;
   const totalEstimatedCost = companyProfitRows.reduce((sum, row) => sum + toNum(row.estimated_cost_amount), 0);
   const totalActualCost = companyProfitRows.reduce((sum, row) => sum + toNum(row.payout_amount), 0);
   const totalEstimatedProfit = totalSales - totalEstimatedCost;
@@ -1258,11 +1259,9 @@ function renderYearSummary(rows) {
 // 초기화
 // ===============================
 function initCompanyTab() {
+  companyProfitRows = mergeCompanyRowsWithDetail(companyProfitRows);
   if (companyProfitRows.length === 0) {
-    companyProfitRows = mergeCompanyRowsWithDetail([]);
-    if (companyProfitRows.length === 0) {
-      companyProfitRows = [buildEmptyCompanyProfitRow()];
-    }
+    companyProfitRows = [buildEmptyCompanyProfitRow()];
   }
 
   if (companyPaymentRows.length === 0) {
@@ -1283,8 +1282,12 @@ function initCompanyTab() {
   renderCompanyProfitRows();
   renderPaymentRows();
 
-  const totalAmountText = document.getElementById("total_amount_display")?.textContent || "0";
-  refreshCompanySummary(toNum(totalAmountText));
+  const currentAmounts =
+    typeof getCurrentAmounts === "function"
+      ? getCurrentAmounts()
+      : { totalAmount: toNum(document.getElementById("total_amount_display")?.textContent || "0") };
+
+  refreshCompanySummary(toNum(currentAmounts.totalAmount));
 
   calcMonthlyCompanyCost();
   loadMonthlyCompanyCostForCurrentMonth();
