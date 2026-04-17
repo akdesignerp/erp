@@ -74,6 +74,7 @@ document.addEventListener("keydown", (e) => {
     let materialsCache = [];
     let autoAppendGuard = false;
     let quoteSearchCache = [];
+    let currentQuoteDbTotalAmount = 0;
 
     const WORK_DISPLAY_ORDER = [
       "철거", "설비", "전기조명", "목공사", "타일", "욕실", "필름", "도장",
@@ -590,6 +591,7 @@ function calculateAll() {
   document.getElementById("supply_amount_display").textContent = formatWon(totals.totalConstruction);
   document.getElementById("vat_amount_display").textContent = formatWon(totals.vat);
   document.getElementById("total_amount_display").textContent = formatWon(totals.finalTotal);
+  document.getElementById("total_amount_display").dataset.value = String(totals.finalTotal);
 
   const workSummaryList = document.getElementById("workSummaryList");
   if (workSummaryList) {
@@ -1171,12 +1173,14 @@ async function selectQuoteFromSearch(quoteId) {
     document.getElementById("area_size").value = quote.sites?.area_size || "";
     document.getElementById("work_type").value = quote.sites?.work_type || "본공사";
     document.getElementById("quote_status").value = quote.quote_status || "가견적";
+    document.getElementById("vat_type").value = (quote.vat_type === "0" || quote.vat_type === 0 || quote.vat_type === "10" || quote.vat_type === 10) ? String(quote.vat_type) : "10";
     document.getElementById("quote_memo").value = quote.memo || "";
 
 document.getElementById("extra_cost").value = toNum(quote.extra_cost);
 document.getElementById("waste_cost").value = toNum(quote.waste_cost);
 document.getElementById("insurance_cost").value = toNum(quote.insurance_cost);
 document.getElementById("site_manage_cost").value = toNum(quote.site_manage_cost);
+    currentQuoteDbTotalAmount = toNum(quote.total_amount);
 
     if (quote.customers?.id) document.getElementById("customer_select").value = quote.customers.id;
     if (quote.sites?.id) document.getElementById("site_select").value = quote.sites.id;
@@ -1406,39 +1410,23 @@ function buildCounselPrintSheet() {
   const memo = document.getElementById("counsel_memo")?.value || "-";
   const status = document.getElementById("quote_status")?.value || document.getElementById("topQuoteStatus")?.textContent || "-";
   return `
-    <div class="pdf-sheet pdf-summary-sheet counsel-print-sheet">
+    <div class="pdf-sheet pdf-summary-sheet">
       <div class="pdf-section-title">상담일지</div>
-      <div class="counsel-print-card">
-        <div class="counsel-print-grid">
-          <div class="counsel-print-item">
-            <div class="counsel-print-label">상담일자</div>
-            <div class="counsel-print-value">${date || '-'}</div>
-          </div>
-          <div class="counsel-print-item">
-            <div class="counsel-print-label">성함</div>
-            <div class="counsel-print-value">${name || '-'}</div>
-          </div>
-          <div class="counsel-print-item">
-            <div class="counsel-print-label">전화번호</div>
-            <div class="counsel-print-value">${phone || '-'}</div>
-          </div>
-          <div class="counsel-print-item">
-            <div class="counsel-print-label">현장명</div>
-            <div class="counsel-print-value">${siteName || '-'}</div>
-          </div>
-          <div class="counsel-print-item full">
-            <div class="counsel-print-label">현장주소</div>
-            <div class="counsel-print-value">${siteAddress || '-'}</div>
-          </div>
-          <div class="counsel-print-item full">
-            <div class="counsel-print-label">견적상태</div>
-            <div class="counsel-print-value">${status || '-'}</div>
-          </div>
-        </div>
-        <div class="counsel-print-memo pdf-memo-box">
-          <div class="pdf-memo-title">상담내용</div>
-          <div class="pdf-memo-content">${(memo || "-").split("\n").join("<br>")}</div>
-        </div>
+      <div class="pdf-meta-line">
+        <div>상담일자 : <strong>${date || '-'}</strong></div>
+        <div>성함 : <strong>${name || '-'}</strong></div>
+        <div>전화번호 : <strong>${phone || '-'}</strong></div>
+      </div>
+      <div class="pdf-meta-line">
+        <div>현장명 : <strong>${siteName || '-'}</strong></div>
+        <div>현장주소 : <strong>${siteAddress || '-'}</strong></div>
+      </div>
+      <div class="pdf-meta-line">
+        <div>견적상태 : <strong>${status || '-'}</strong></div>
+      </div>
+      <div class="pdf-memo-box">
+        <div class="pdf-memo-title">상담내용</div>
+        <div class="pdf-memo-content">${(memo || "-").split("\n").join("<br>")}</div>
       </div>
     </div>`;
 }
@@ -1460,88 +1448,15 @@ function printQuote() {
     fillPdfData();
     if (typeof syncContractFromEstimate === "function") syncContractFromEstimate();
     if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
-
     const printArea = document.getElementById("pdfPrintArea");
     if (!printArea) throw new Error("PDF 출력 영역을 찾을 수 없습니다.");
-
-    const cloned = printArea.cloneNode(true);
-    const oldExtra = cloned.querySelector("#pdfExtraSheets");
-    if (oldExtra) oldExtra.remove();
-
-    const extra = document.createElement("div");
-    extra.id = "pdfExtraSheets";
-    extra.innerHTML = buildCounselPrintSheet() + (typeof buildContractPrintHtml === "function"
-      ? buildContractPrintHtml()
-      : (document.getElementById("contractSheet")?.outerHTML || ""));
-    cloned.appendChild(extra);
-
-    const html = `<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AK디자인 견적 출력</title>
-<base href="${location.href.replace(/[^/]*$/, "")}">
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="contract.css">
-<style>
-  body { margin:0; padding:0; background:#fff; }
-  .wrap, .topbar, .tabs, .summary-strip, .modal-overlay, .screen-only { display:none !important; }
-  #pdfPrintArea, #pdfExtraSheets { display:block !important; }
-  #pdfPrintRoot { display:block !important; }
-  #pdfPrintRoot .pdf-sheet, #pdfPrintRoot .contract-sheet {
-    page-break-after: always;
-    break-after: page;
-  }
-  #pdfPrintRoot .pdf-sheet:last-child, #pdfPrintRoot .contract-sheet:last-child {
-    page-break-after: auto;
-    break-after: auto;
-  }
-  #pdfPrintRoot .pdf-sheet, #pdfPrintRoot .contract-sheet {
-    overflow: visible !important;
-    height: auto !important;
-    max-height: none !important;
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-  }
-  #pdfPrintRoot .pdf-memo-content,
-  #pdfPrintRoot .contract-note,
-  #pdfPrintRoot .contract-paragraph,
-  #pdfPrintRoot .contract-info-table td,
-  #pdfPrintRoot .contract-pay-table td,
-  #pdfPrintRoot .contract-sign-table td {
-    white-space: pre-wrap !important;
-    overflow-wrap: anywhere !important;
-    word-break: break-word !important;
-  }
-  #pdfPrintRoot .contract-pay-table input,
-  #pdfPrintRoot .contract-pay-table textarea,
-  #pdfPrintRoot .contract-info-table input,
-  #pdfPrintRoot .contract-info-table textarea { display:none !important; }
-  @media print {
-    @page { size:A4; margin:4mm; }
-    html, body { width:210mm; margin:0 !important; padding:0 !important; background:#fff !important; }
-    #pdfPrintRoot { display:block !important; }
-    #pdfPrintRoot .contract-sheet { font-size:8.4px !important; line-height:1.14 !important; overflow:visible !important; max-height:none !important; page-break-inside:auto !important; break-inside:auto !important; }
-    #pdfPrintRoot .contract-title { font-size:15px !important; margin-bottom:4px !important; }
-    #pdfPrintRoot .contract-subtitle { margin:3px 0 2px !important; }
-    #pdfPrintRoot .contract-info-table th, #pdfPrintRoot .contract-info-table td, #pdfPrintRoot .contract-pay-table th, #pdfPrintRoot .contract-pay-table td, #pdfPrintRoot .contract-sign-table th, #pdfPrintRoot .contract-sign-table td { padding:2px 3px !important; font-size:8.2px !important; }
-    #pdfPrintRoot .contract-paragraph, #pdfPrintRoot .contract-note { font-size:8.2px !important; line-height:1.14 !important; margin-bottom:3px !important; padding:3px 4px !important; }
-  }
-</style>
-</head>
-<body>
-  <div id="pdfPrintRoot">${cloned.outerHTML}</div>
-</body>
-</html>`;
-
-    const w = window.open("", "_blank");
-    if (!w) throw new Error("팝업이 차단되어 인쇄창을 열 수 없습니다.");
-    const finalHtml = html.replace("</body>", `<script>let __printed=false;function runPrint(){if(__printed) return;__printed=true;setTimeout(()=>{try{window.print();}catch(e){}},250);}window.addEventListener('load', runPrint, { once:true });window.addEventListener('afterprint', ()=>{try{window.close();}catch(e){}});<\/script></body>`);
-    w.document.open();
-    w.document.write(finalHtml);
-    w.document.close();
-    w.focus();
+    const extra = ensurePdfExtraSheets();
+    if (extra) {
+      extra.innerHTML = buildCounselPrintSheet() + (typeof buildContractPrintHtml === "function" ? buildContractPrintHtml() : (document.getElementById("contractSheet")?.outerHTML || ""));
+    }
+    document.body.classList.add("printing-pdf");
+    window.print();
+    setTimeout(() => document.body.classList.remove("printing-pdf"), 300);
   } catch (err) {
     console.error("PDF 인쇄 오류:", err);
     alert("PDF 인쇄용 데이터 채우기 중 오류: " + err.message);
@@ -1833,3 +1748,160 @@ function updateDetailRow(index, key, value) {
 function renderDetailInputTable() {
   if (typeof renderDetailRows === "function") renderDetailRows();
 }
+
+
+
+
+/* ===== ERP REBUILD APP OVERRIDES ===== */
+function showTab(tabName) {
+  const tabs = ["counsel", "write", "summary", "detail", "contract", "company"];
+  tabs.forEach(name => document.getElementById(`tab-${name}`)?.classList.add("hidden"));
+  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+  if (tabName === "company") {
+    if (typeof requestCompanyAccess === "function") requestCompanyAccess();
+    return;
+  }
+  document.getElementById(`tab-${tabName}`)?.classList.remove("hidden");
+  document.querySelector(`.tab-btn[data-tab="${tabName}"]`)?.classList.add("active");
+  if (tabName === "summary" || tabName === "detail") renderPreviewTables();
+  if (tabName === "contract" && typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+  if (tabName === "counsel" && typeof syncCounselFromEstimate === "function") {
+    syncCounselFromEstimate(false);
+    if (typeof loadCounselLogList === "function") loadCounselLogList();
+  }
+}
+
+
+function buildPrintSection(title, innerHtml, extraClass = "") {
+  return `<section class="print-block ${extraClass}"><div class="print-page">${innerHtml}</div></section>`;
+}
+
+function stripPrintUnneededTitles(html) {
+  return String(html || "");
+}
+
+function buildPrintCoverHtml() {
+  return `
+    <div class="print-cover">
+      <div class="print-cover-title">실내인테리어 표준 견적서</div>
+    </div>
+  `;
+}
+
+function buildCounselPrintHtml() {
+  const get = (id) => document.getElementById(id)?.value || "";
+  return `
+    <div class="card">
+      <div class="card-header">상담일지</div>
+      <div class="card-body">
+        <div class="form-grid-4">
+          <div class="field"><label>상담일자</label><input value="${escapeHtml(get("counsel_date"))}" readonly></div>
+          <div class="field"><label>성함</label><input value="${escapeHtml(get("counsel_name"))}" readonly></div>
+          <div class="field"><label>전화번호</label><input value="${escapeHtml(get("counsel_phone"))}" readonly></div>
+          <div class="field"><label>현장명</label><input value="${escapeHtml(get("counsel_site_name"))}" readonly></div>
+          <div class="field" style="grid-column: span 4;"><label>현장주소</label><input value="${escapeHtml(get("counsel_site_address"))}" readonly></div>
+          <div class="field memo-box" style="grid-column: span 4;"><label>상담내용</label><textarea readonly>${escapeHtml(get("counsel_memo"))}</textarea></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function cloneHtmlWithLiveFormValues(sourceEl) {
+  if (!sourceEl) return "";
+  const clone = sourceEl.cloneNode(true);
+  const srcFields = sourceEl.querySelectorAll("input, textarea, select");
+  const cloneFields = clone.querySelectorAll("input, textarea, select");
+
+  srcFields.forEach((src, idx) => {
+    const dest = cloneFields[idx];
+    if (!dest) return;
+
+    if (src.tagName === "TEXTAREA") {
+      dest.textContent = src.value || "";
+      return;
+    }
+
+    if (src.tagName === "SELECT") {
+      const options = dest.querySelectorAll("option");
+      options.forEach((opt, optIdx) => {
+        const srcOpt = src.options[optIdx];
+        if (!srcOpt) return;
+        if (srcOpt.selected) opt.setAttribute("selected", "selected");
+        else opt.removeAttribute("selected");
+      });
+      return;
+    }
+
+    const type = (src.getAttribute("type") || "").toLowerCase();
+    if (type === "checkbox" || type === "radio") {
+      if (src.checked) dest.setAttribute("checked", "checked");
+      else dest.removeAttribute("checked");
+    } else {
+      dest.setAttribute("value", src.value || "");
+    }
+  });
+
+  return clone.outerHTML;
+}
+
+
+function printQuote() {
+  try {
+    renderPreviewTables();
+    if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
+    if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+    const area = document.getElementById("printArea");
+    if (!area) throw new Error("printArea를 찾을 수 없습니다.");
+    const summary = document.querySelector("#tab-summary .card");
+    const detail = document.querySelector("#tab-detail .card");
+    const contract = document.getElementById("contractSheet");
+    area.innerHTML = [
+      buildPrintSection("겉지", buildPrintCoverHtml(), "print-cover-block"),
+      buildPrintSection("견적요약", stripPrintUnneededTitles(summary ? cloneHtmlWithLiveFormValues(summary) : "")),
+      buildPrintSection("견적상세", stripPrintUnneededTitles(detail ? cloneHtmlWithLiveFormValues(detail) : "")),
+      buildPrintSection("상담일지", buildCounselPrintHtml()),
+      buildPrintSection("계약서", stripPrintUnneededTitles(contract ? cloneHtmlWithLiveFormValues(contract) : ""))
+    ].join("");
+    window.print();
+  } catch (err) {
+    console.error(err);
+    alert("PDF 인쇄 실패: " + err.message);
+  }
+}
+
+const __originalSelectQuoteFromSearch = selectQuoteFromSearch;
+selectQuoteFromSearch = async function(quoteId) {
+  await __originalSelectQuoteFromSearch(quoteId);
+  calculateAll();
+  if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
+  if (typeof loadCounselLogList === "function") await loadCounselLogList();
+  if (typeof loadContractByQuoteNo === "function") await loadContractByQuoteNo(document.getElementById("quote_no")?.value || "");
+  if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+};
+
+const __originalResetQuoteForm = resetQuoteForm;
+resetQuoteForm = function() {
+  __originalResetQuoteForm();
+  currentQuoteDbTotalAmount = 0;
+  ["counsel_date","counsel_name","counsel_phone","counsel_site_name","counsel_site_address","counsel_memo"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const status = document.getElementById("counselStatusBox");
+  if (status) status.textContent = "상담일지를 새로 작성할 수 있습니다.";
+  if (typeof resetContractPayments === "function") resetContractPayments();
+  if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
+  if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+  if (typeof loadCounselLogList === "function") loadCounselLogList();
+};
+
+const __originalInitApp = initApp;
+initApp = async function() {
+  await __originalInitApp();
+  showTab("counsel");
+  if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
+  if (typeof loadCounselLogList === "function") await loadCounselLogList();
+  if (typeof loadContractByQuoteNo === "function") await loadContractByQuoteNo(document.getElementById("quote_no")?.value || "");
+  if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+};

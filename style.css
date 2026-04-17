@@ -90,7 +90,7 @@ button:active {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -173,7 +173,7 @@ button:active {
 
 .form-grid-4 {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
 }
 
@@ -915,7 +915,7 @@ tbody td textarea {
   }
 
   body {
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   .wrap,
@@ -1508,4 +1508,289 @@ text-align: right;
     padding: 6px 10px;
     border-radius: 6px;
   }
+}
+
+
+/* patch additions */
+.company-auth-card { max-width: 460px; }
+#companyAuthModal .field input { width: 100%; }
+#tab-contract .control-card, #tab-contract .contract-sheet { margin-bottom: 14px; }
+#tab-contract .contract-pay-table input,
+#tab-contract .contract-info-table input { width: 100%; box-sizing: border-box; }
+#tab-counsel .status-box, #companyAuthStatus, #statusBox { white-space: pre-wrap; }
+
+#pdfExtraSheets { display: none; }
+@media print {
+  #pdfExtraSheets { display: block !important; }
+  #pdfExtraSheets .contract-sheet { margin-top: 6mm !important; }
+  #pdfExtraSheets .pdf-sheet { page-break-before: always; }
+  #pdfExtraSheets .contract-sheet { page-break-before: always; }
+}
+
+
+#tab-counsel .counsel-list-card { border:1px solid #d7dde7; border-radius:16px; background:#f8fafc; padding:12px; }
+#tab-counsel .counsel-list-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+#tab-counsel .counsel-list-box { display:flex; flex-direction:column; gap:8px; }
+#tab-counsel .counsel-list-item { width:100%; border:1px solid #d7dde7; background:#fff; border-radius:12px; padding:12px 14px; text-align:left; cursor:pointer; }
+#tab-counsel .counsel-list-item:hover { background:#eef3fb; }
+#tab-counsel .counsel-list-top { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-weight:700; color:#111827; }
+#tab-counsel .counsel-list-sub { margin-top:4px; color:#4b5563; font-size:14px; }
+#tab-counsel .counsel-list-box .empty { padding:14px; border:1px dashed #cbd5e1; border-radius:12px; color:#64748b; background:#fff; }
+@media (max-width: 768px){
+  #tab-counsel .counsel-list-top { flex-direction:column; gap:4px; }
+}
+
+@media print {
+  #pdfExtraSheets .contract-sheet, #pdfExtraSheets .pdf-sheet { overflow: visible !important; }
+  #pdfExtraSheets .contract-note, #pdfExtraSheets .contract-paragraph, #pdfExtraSheets .pdf-memo-content { white-space: pre-wrap !important; overflow-wrap: anywhere !important; }
+}
+
+
+/* stage1 unified overrides */
+.title-area p { display:none !important; }
+.tabs { grid-template-columns: repeat(5, minmax(0,1fr)) !important; }
+.tab-btn { white-space: nowrap; font-size: 15px; padding: 12px 8px; }
+.top-buttons { align-items:center; }
+#tab-counsel .inline-actions { justify-content:flex-start; }
+#printGuard, #pdfExtraSheets { display:none; }
+body.printing-pdf .wrap,
+body.printing-pdf .modal-overlay { display:none !important; }
+body.printing-pdf #pdfPrintArea,
+body.printing-pdf #pdfPrintArea * { visibility: visible !important; }
+body.printing-pdf #pdfPrintArea { display:block !important; position:static !important; width:100% !important; margin:0 !important; padding:0 !important; background:#fff !important; }
+@media print {
+  body * { visibility:hidden; }
+  #pdfPrintArea, #pdfPrintArea * { visibility:visible !important; }
+  #pdfPrintArea { display:block !important; position:absolute !important; left:0 !important; top:0 !important; width:100% !important; background:#fff !important; }
+  #pdfExtraSheets { display:block !important; }
+}
+
+
+/* ===== ERP REBUILD OVERRIDES ===== */
+.title-area p { display:none !important; }
+.tabs { display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+.detail-actions { display:flex; gap:8px; }
+.contract-toolbar { margin-bottom:12px; }
+.contract-sheet { display:flex; flex-direction:column; gap:14px; }
+.contract-title { text-align:center; font-size:32px; font-weight:900; padding:22px 12px 8px; }
+.contract-card, .contract-subcard { background: linear-gradient(145deg, #f8fafb, #e3e7eb); border: 1px solid #cfd4da; border-radius: 18px; overflow: hidden; box-shadow: inset 1px 1px 0 rgba(255,255,255,0.65), 2px 2px 6px rgba(0,0,0,0.06); break-inside: avoid; page-break-inside: avoid; }
+.contract-card-emphasis { padding-bottom:14px; }
+.contract-card-title { padding:14px 16px; background: linear-gradient(145deg, #eef1f4, #dde2e7); border-bottom:1px solid #d4d9df; font-size:18px; font-weight:800; color:#2f3438; }
+.contract-card-body { padding:16px; line-height:1.8; white-space:normal; }
+.contract-subcards { display:grid; grid-template-columns:1fr; gap:12px; padding:14px; }
+.contract-info-table, .contract-pay-table, .contract-sign-table { width:100%; border-collapse:collapse; }
+.contract-info-table th, .contract-info-table td, .contract-pay-table th, .contract-pay-table td, .contract-sign-table th, .contract-sign-table td { border:1px solid #d8dde3; padding:10px 12px; vertical-align:top; background:#fff; }
+.contract-pay-table th, .contract-sign-table th, .contract-info-table th { background:#f4f6f8; font-weight:800; }
+.contract-total-edit-wrap { display:flex; align-items:center; gap:8px; }
+.contract-total-edit-wrap input { border:none; padding:0; background:transparent; font-weight:800; }
+.contract-note { padding:14px 16px; white-space:pre-line; line-height:1.7; }
+.contract-date-row { text-align:right; font-size:18px; font-weight:800; padding:6px 4px; }
+.print-area { display:none; }
+.print-block { margin-bottom:24px; break-inside: avoid; page-break-inside: avoid; }
+.print-block .card-header, .print-block .contract-card-title { font-size:18px; }
+.print-header { font-size:24px; font-weight:900; margin:0 0 12px 0; }
+.screen-only { display:block; }
+@media (max-width:980px){ .tabs{ grid-template-columns: repeat(5, minmax(120px,1fr)); overflow-x:auto; } .main-grid{ grid-template-columns:1fr; } .summary-strip{ grid-template-columns:repeat(2,1fr); } .form-grid-4{ grid-template-columns:repeat(2,1fr); } }
+@media print { @page { size:A4; margin:10mm; } body * { visibility:hidden !important; } #printArea, #printArea * { visibility:visible !important; } #printArea { display:block !important; position:static !important; width:100% !important; } #printArea .screen-only { display:none !important; } .screen-only, .topbar, .tabs, .summary-strip, #tab-company, #companyAuthModal, #loadModal, #mobileDetailInput, .login-gate { display:none !important; } .print-block { display:block; margin-bottom:16px; } .card, .contract-card, .contract-subcard { box-shadow:none !important; background:#fff !important; } }
+
+
+/* ===== 2026-04-18 patch ===== */
+.contract-title-with-action{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.contract-inline-add-btn{
+  padding:8px 14px;
+  white-space:nowrap;
+}
+.contract-rate-wrap{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+}
+.contract-rate-wrap .contract-pay-rate{
+  width:52px;
+  min-width:52px;
+  padding:6px 6px;
+  text-align:right;
+}
+.contract-rate-unit{
+  display:inline-block;
+  min-width:auto;
+  font-weight:800;
+}
+.contract-date-row{
+  text-align:center !important;
+  width:100%;
+}
+#tab-counsel .screen-only.print-hide{
+  display:block;
+}
+.print-block{
+  page-break-before:always;
+  break-before:page;
+}
+.print-block:first-child{
+  page-break-before:auto;
+  break-before:auto;
+}
+.print-page{
+  min-height:auto;
+}
+.print-page-header{
+  font-size:24px;
+  font-weight:900;
+  margin:0 0 12px 0;
+}
+@media print {
+  .print-block{
+    margin:0 !important;
+    padding:0 !important;
+    page-break-before:always !important;
+    break-before:page !important;
+    page-break-after:auto !important;
+  }
+  .print-block:first-child{
+    page-break-before:auto !important;
+    break-before:auto !important;
+  }
+  #printArea .screen-only,
+  #printArea .btn-light,
+  #printArea button{
+    display:none !important;
+  }
+  #printArea .counsel-list-card,
+  #printArea #counselStatusBox{
+    display:none !important;
+  }
+}
+
+
+/* ===== 2026-04-18 patch ===== */
+.contract-title-with-action{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.contract-inline-add-btn{
+  padding:8px 14px;
+  white-space:nowrap;
+}
+.contract-rate-wrap{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+}
+.contract-rate-wrap .contract-pay-rate{
+  width:52px;
+  min-width:52px;
+  padding:6px 6px;
+  text-align:right;
+}
+.contract-rate-unit{
+  display:inline-block;
+  min-width:auto;
+  font-weight:800;
+}
+.contract-date-row{
+  text-align:center !important;
+  width:100%;
+}
+.print-block{
+  page-break-before:always;
+  break-before:page;
+}
+.print-block:first-child{
+  page-break-before:auto;
+  break-before:auto;
+}
+.print-page-header{
+  font-size:24px;
+  font-weight:900;
+  margin:0 0 12px 0;
+}
+@media print {
+  .print-block{
+    margin:0 !important;
+    padding:0 !important;
+    page-break-before:always !important;
+    break-before:page !important;
+    page-break-after:auto !important;
+  }
+  .print-block:first-child{
+    page-break-before:auto !important;
+    break-before:auto !important;
+  }
+  #printArea .screen-only,
+  #printArea .btn-light,
+  #printArea button{
+    display:none !important;
+  }
+  #printArea .counsel-list-card,
+  #printArea #counselStatusBox{
+    display:none !important;
+  }
+}
+
+
+/* ===== ERP REBUILD V3 OVERRIDES ===== */
+.contract-card-emphasis,
+.contract-card-emphasis .contract-subcards{
+  break-inside:auto !important;
+  page-break-inside:auto !important;
+}
+.contract-card-emphasis .contract-subcard{
+  break-inside:auto !important;
+  page-break-inside:auto !important;
+}
+.contract-rate-wrap{
+  gap:2px !important;
+}
+.contract-rate-wrap .contract-pay-rate{
+  width:42px !important;
+  min-width:42px !important;
+  padding-right:2px !important;
+  text-align:right;
+}
+.contract-date-row{
+  text-align:center !important;
+  justify-content:center;
+}
+.print-cover{
+  min-height:260mm;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.print-cover-title{
+  font-size:34px;
+  font-weight:900;
+  letter-spacing:-1px;
+}
+#printArea .print-page-header,
+#printArea .card-header.screen-only,
+#printArea .screen-only,
+#printArea .print-delete-title{
+  display:none !important;
+}
+@media print{
+  .print-block{
+    page-break-before:always !important;
+    page-break-after:auto !important;
+    break-before:page !important;
+  }
+  .print-block:first-child{
+    page-break-before:auto !important;
+    break-before:auto !important;
+  }
+}
+
+
+.contract-total-edit-wrap input[readonly]{background:#fff;font-weight:800;}
+@media print{
+  .card-header{display:block !important;text-align:left !important;}
 }

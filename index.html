@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
-  <link rel="stylesheet" href="contract.css" />
+  
 </head>
 <body>
 <div id="loginGate" class="login-gate">
@@ -23,9 +23,10 @@
     <div class="topbar">
       <div class="title-area">
         <h1>AK디자인 견적서_ERP</h1>
-        <p>검색형 불러오기 팝업 포함 / 이름·현장명·주소 일부 검색 가능</p>
+        
       </div>
    <div class="top-buttons">
+  <button class="btn-light" onclick="resetQuoteForm()">신규작성</button>
    <button class="btn-primary" onclick="saveQuote()">저장</button>
   <button class="btn-light" onclick="openLoadModal()">불러오기</button>
   <button class="btn-light" onclick="printQuote()">PDF 인쇄</button>
@@ -34,11 +35,11 @@
   <button class="btn-light" onclick="logout()">로그아웃</button>
 </div>
     </div><div class="tabs">
-  <button class="tab-btn active" data-tab="write" onclick="showTab('write')">견적작성</button>
+  <button class="tab-btn active" data-tab="counsel" onclick="showTab('counsel')">상담일지</button>
+  <button class="tab-btn" data-tab="write" onclick="showTab('write')">견적작성</button>
   <button class="tab-btn" data-tab="summary" onclick="showTab('summary')">견적요약</button>
   <button class="tab-btn" data-tab="detail" onclick="showTab('detail')">견적상세</button>
-  <button class="tab-btn" data-tab="contract" onclick="showTab('contract')">계약서</button>
-  <button class="tab-btn" data-tab="counsel" onclick="showTab('counsel')">상담일지</button>
+  <button class="tab-btn" data-tab="contract" onclick="showTab('contract')">계약서작성</button>
 </div>
 
 <div class="summary-strip">
@@ -122,12 +123,7 @@
       <div class="card">
         <div class="card-header">합계 정보</div>
         <div class="card-body">
-          <div class="action-grid">
-            <button class="btn-light" onclick="loadSites()">현장 새로고침</button>
-            <button class="btn-light" onclick="loadCustomers()">고객 새로고침</button>
-            <button class="btn-light" onclick="addQuoteRow()">행추가</button>
-            <button class="btn-light" onclick="resetQuoteForm()">신규작성</button>
-          </div>
+          
 
           <div class="sum-box"><div class="sum-label">직접공사비(상세합)</div><div class="sum-value" id="direct_cost_display">₩ 0</div></div>
           <div class="sum-box"><div class="sum-label">간접비 합계</div><div class="sum-value" id="indirect_cost_display">₩ 0</div></div>
@@ -268,12 +264,10 @@
         <div class="field memo-box" style="grid-column: span 4;"><label>상담내용</label><textarea id="counsel_memo" placeholder="상담내용 입력"></textarea></div>
       </div>
       <div class="inline-actions" style="margin-top:12px;">
-        <button class="btn-light" type="button" onclick="syncCounselFromEstimate()">현재 견적 반영</button>
         <button class="btn-light" type="button" onclick="saveCounselLog()">상담일지 저장</button>
-        <button class="btn-light" type="button" onclick="loadLatestCounselLog()">최근 상담일지 불러오기</button>
       </div>
-      <div id="counselStatusBox" class="status-box" style="margin-top:10px;">상담일지는 현장주소 기준으로 날짜별 누적 저장됩니다.</div>
-      <div class="counsel-list-card" style="margin-top:14px;">
+      <div id="counselStatusBox" class="status-box screen-only" style="margin-top:10px;">상담일지는 현장주소 기준으로 날짜별 누적 저장됩니다.</div>
+      <div class="counsel-list-card screen-only" style="margin-top:14px;">
         <div class="counsel-list-header">
           <strong>현장 날짜별 상담일지 목록</strong>
           <button class="btn-light" type="button" onclick="loadCounselLogList()">현재 현장 목록 새로고침</button>
@@ -287,77 +281,63 @@
 </div>
 
 
+
 <div id="tab-contract" class="hidden">
-  <div class="wrap" style="padding:0; max-width:none;">
-    
-<div class="screen-only control-card">
-  <div class="control-grid">
-    <div class="field">
-      <label>견적번호</label>
-      <input id="contract_quote_no_input" placeholder="견적번호 자동연동" readonly />
-    </div>
-    <div class="field">
-      <label>VAT 여부</label>
-      <select id="contract_vat_type">
-        <option value="10">부가가치세 포함</option>
-        <option value="0">부가가치세 불포함</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>착공일</label>
-      <input type="date" id="contract_start_date_input" />
-    </div>
-    <div class="field">
-      <label>공사완료일</label>
-      <input type="date" id="contract_end_date_input" />
+  <div class="contract-toolbar screen-only">
+    <div class="card">
+      <div class="card-header screen-only">계약서작성</div>
+      <div class="card-body">
+        <div class="form-grid-4">
+          <div class="field"><label>견적번호</label><input id="contract_quote_no_input" readonly /></div>
+          <div class="field"><label>VAT 여부</label>
+            <select id="contract_vat_type">
+              <option value="10">부가가치세 포함</option>
+              <option value="0">부가가치세 불포함</option>
+            </select>
+          </div>
+          <div class="field"><label>착공일</label><input type="date" id="contract_start_date_input" /></div>
+          <div class="field"><label>공사완료일</label><input type="date" id="contract_end_date_input" /></div>
+        </div>
+        <div class="inline-actions" style="margin-top:12px;">
+          
+        </div>
+        <div id="statusBox" class="status-box" style="margin-top:10px;">현재 견적 기준으로 계약서를 표시합니다.</div>
+      </div>
     </div>
   </div>
-  <div class="action-row">
-    <button class="btn btn-light" type="button" onclick="syncContractFromEstimate()">현재 견적 반영</button>
-    <button class="btn btn-light" type="button" onclick="addContractPaymentRow()">행추가</button>
-    <button class="btn btn-primary" type="button" onclick="printContractOnly()">계약서 PDF 출력</button>
-  </div>
-  <div id="statusBox" class="status-box">현재 견적 기준으로 계약서를 표시합니다.</div>
-</div>
 
-    <div id="contractSheet" class="contract-sheet">
-      <div class="contract-title">실내인테리어 표준계약서</div>
-
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제1조(목적)</strong><br>
-이 계약서는 실내건축·창호 공사를 의뢰한 소비자와 시공업자와 사이에 체결된 공사 계약상의 권리·의무 및 책임에 관한 사항을 규정함을 목적으로 한다.</p>
+  <div id="contractSheet" class="contract-sheet">
+    <div class="contract-title">실내인테리어 표준계약서</div>
+    <section class="contract-card">
+      <div class="contract-card-title">제1조(목적)</div>
+      <div class="contract-card-body">
+        이 계약서는 실내건축·창호 공사를 의뢰한 소비자와 시공업자 사이에 체결된 공사 계약상의 권리·의무 및 책임에 관한 사항을 규정함을 목적으로 한다.
       </div>
+    </section>
 
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제2조(계약서 제공·설명 의무)</strong><br>
-“시공업자”는 계약체결 시 소비자에게 상호 및 대표자 성명, 영업소재지 주소(“소비자”의 불만을 처리할 수 있는 곳의 주소 포함)를 기재한 본 계약서, 공사면허 등을 소비자에게 제공하고 다음 각 호의 규정을 “소비자”가 이해할 수 있도록 설명하여야 한다.</p>
+    <section class="contract-card">
+      <div class="contract-card-title">제2조(계약서 제공·설명 의무)</div>
+      <div class="contract-card-body">
+        시공업자는 계약체결 시 소비자에게 상호 및 대표자 성명, 영업소재지 주소를 기재한 본 계약서와 관련 정보를 제공하고, 필요한 내용을 소비자가 이해할 수 있도록 설명하여야 한다.
       </div>
+    </section>
 
-      <div class="contract-card contract-card-section">
-        <div class="contract-subtitle">제3조(계약내용)</div>
-
-        <div class="contract-card contract-card-subsection compact">
-          <div class="contract-subtitle">1. 시공장소 및 공사일정</div>
+    <section class="contract-card contract-card-emphasis">
+      <div class="contract-card-title">제3조(계약내용)</div>
+      <div class="contract-subcards">
+        <article class="contract-subcard">
+          <div class="contract-card-title">1. 시공장소 및 공사일정</div>
           <table class="contract-info-table">
             <tbody>
-              <tr>
-                <th style="width:160px;">공사장소</th>
-                <td id="contract_site_address">-</td>
-              </tr>
-              <tr>
-                <th>착 공 일</th>
-                <td id="contract_start_date">-</td>
-              </tr>
-              <tr>
-                <th>공사완료</th>
-                <td id="contract_end_date">-</td>
-              </tr>
+              <tr><th style="width:160px;">공사장소</th><td id="contract_site_address">-</td></tr>
+              <tr><th>착 공 일</th><td id="contract_start_date">-</td></tr>
+              <tr><th>공사완료</th><td id="contract_end_date">-</td></tr>
             </tbody>
           </table>
-        </div>
+        </article>
 
-        <div class="contract-card contract-card-subsection compact">
-          <div class="contract-subtitle">2. 공사비 및 지급방법</div>
+        <article class="contract-subcard">
+          <div class="contract-card-title contract-title-with-action"><span>2. 공사비 및 지급방법</span><button class="btn-light screen-only contract-inline-add-btn" type="button" onclick="addContractPaymentRow()">행추가</button></div>
           <table class="contract-pay-table">
             <thead>
               <tr>
@@ -381,134 +361,55 @@
               </tr>
             </tbody>
           </table>
-
           <div class="contract-note" id="contract_account_info">* 계좌번호 : 카카오뱅크 3333-23-6468858 에이케이디자인 김민석
 * 영수증은 입금내용으로 대신한다.</div>
-        </div>
+        </article>
 
-        <div class="contract-card contract-card-subsection compact">
-          <div class="contract-subtitle">3. 공사의 범위 및 공사의 내역</div>
+        <article class="contract-subcard">
+          <div class="contract-card-title">3. 공사의 범위 및 공사의 내역</div>
           <div class="contract-note" id="contract_scope_text">견적서 참고
 추가 공사 진행시 금액은 추가 될 수 있습니다.
 공사 시공 및 완료 사진은 SNS에 게시될 수 있으며 견적서는 온라인상에 공개 불가 합니다.
 고객의 추가 공사 건이 없는 경우 추가금은 받지 않습니다.</div>
-        </div>
+        </article>
       </div>
+    </section>
 
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제4조(“시공업자”의 의무)</strong><br>
-① “시공업자”는 제3조의 계약내용을 준수하여 공사를 완료하여야 한다.
-② “시공업자”는 공사완료 후 당초 설계서에 의한 공사내용이 계약내용과 이상이 없음을 “소비자”에게 확인시켜야 한다.
-③ “시공업자”는 제10조 규정에 따라 하자보수의 책임을 진다.</p>
-      </div>
+    <section class="contract-card"><div class="contract-card-title">제4조(“시공업자”의 의무)</div><div class="contract-card-body">① 시공업자는 제3조의 계약내용을 준수하여 공사를 완료하여야 한다.<br>② 시공업자는 공사완료 후 공사내용이 계약내용과 이상이 없음을 소비자에게 확인시켜야 한다.<br>③ 시공업자는 제10조에 따른 하자보수 책임을 진다.</div></section>
+    <section class="contract-card"><div class="contract-card-title">제5조(“소비자”의 의무)</div><div class="contract-card-body">① 소비자는 제3조의 공사금액을 정해진 기일에 지급하여야 한다.<br>② 하자가 발견된 경우 소비자는 보수 또는 보수에 갈음하는 금액을 청구할 수 있다.</div></section>
+    <section class="contract-card"><div class="contract-card-title">제6조(지연배상)</div><div class="contract-card-body">① 소비자가 공사금액 지급을 지연한 경우 지연손해금을 지급하여야 한다.<br>② 시공업자가 공사완료 일자를 준수하지 않을 경우 지연손해금을 지급하여야 한다.</div></section>
+    <section class="contract-card"><div class="contract-card-title">제7조(계약해제 및 위약금)</div><div class="contract-card-body">① 당사자는 계약조건 위반 등 사유가 있는 경우 계약을 해제할 수 있다.<br>② 귀책사유로 계약이 해제된 경우 위약금을 지급하여야 한다.</div></section>
+    <section class="contract-card"><div class="contract-card-title">제8조(공사변경 및 책임)</div><div class="contract-card-body">① 시공업자는 자재변경 등 필요한 경우 소비자와 협의 후 동질·동가의 제품으로 시공할 수 있다.<br>② 소비자 사정으로 공사내용이 변경되는 경우 추가비용은 소비자가 부담한다.</div></section>
+    <section class="contract-card"><div class="contract-card-title">제9조(양도양수)</div><div class="contract-card-body">① 소비자는 계약 이행에 영향을 미치는 사유가 발생하였을 때 시공업자에게 통지하여야 한다.<br>② 건축물 소유권 이전이 발생한 경우 계약 승계를 위해 노력하여야 한다.</div></section>
+    <section class="contract-card"><div class="contract-card-title">제10조(하자보수)</div><div class="contract-card-body">① 공사 종료 후 1년을 기본 무상수리 기간으로 하며, 전등·수전 등 소모품은 1년, 화장실 누수는 3년으로 한다.<br>② 무상수리 기간 이후에는 유상수리 할 수 있다.<br>③ 규격 미달 시 교체시공 또는 차액 환급을 청구할 수 있다.</div></section>
+    <section class="contract-card"><div class="contract-card-title">제11조(분쟁의 해결)</div><div class="contract-card-body">이 계약서에서 규정하지 않은 사항과 해석에 관하여는 관계법령 또는 상관례에 따른다.</div></section>
+    <section class="contract-card"><div class="contract-card-title">제12조(관할법원)</div><div class="contract-card-body">이 계약과 관련된 분쟁에 관한 소송은 민사소송법상의 관할법원에 제기하여야 한다.</div></section>
 
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제5조(“소비자”의 의무)</strong><br>
-① “소비자”는 제3조 제3항의 공사금액을 정해진 기일에 “시공업자”에게 지급하여야 한다.
-② “소비자”는 공사금액을 지급함에 있어 하자가 발견되었을 경우 “소비자”는 하자의 보수나 하자보수에 갈음하는 금액을 “시공업자”에게 청구할 수 있으며, 이를 청구한 경우 “소비자”는 “시공업자”가 하자를 보수하거나 하자보수에 갈음하는 금액을 지급 할 때까지 그에 상응하는 공사금액의 지급을 거절할 수 있다.</p>
-      </div>
+    <div class="contract-date-row">
+      <span id="contract_sign_year">2026</span> 년
+      <span id="contract_sign_month">4</span> 월
+      <span id="contract_sign_day">18</span> 일
+    </div>
 
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제6조(지연배상)</strong><br>
-① “소비자”가 공사금액의 지급을 지연한 경우 “소비자”는 연체일로부터 실제 지급일까지 ( 5 )%의 연체이율을 적용한 지연손해금을 “시공업자”에게 지급하여야 한다. 다만, 연체이율은 시중은행 일반자금 대출의 연체이율 범위내에서 정하도록 한다.
-② “시공업자”가 계약서에서 정한 공사완료 일자를 준수하지 않을 경우 “시공업자”는 “소비자”가 공사완료 이전까지 지급한 금액에 대하여 공사지연일로부터 최종 공사완공일까지 기간에 전항의 연체이율을 적용한 지연손해금을 “소비자”에게 지급하여야 한다.</p>
-      </div>
-
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제7조(계약해제 및 위약금)</strong><br>
-① “소비자” 또는 “시공업자”는 다음 각 호의 어느 하나에 해당하는 경우 상대방에게 서면으로 즉시 계약을 해제할 수 있다.
-1. “시공업자”의 책임 있는 사유로 공사완료일 내에 공사를 완성할 가능성이 없음이 명백한 경우
-2. “소비자” 또는 “시공업자”가 계약조건을 위반하여 그 위반으로 계약의 목적을 달성할 수 없을 경우
-② “소비자”는 “시공업자”가 정당한 사유 없이 착공을 지연한 경우 상당한 기간을 정하여 서면으로 계약의 이행을 최고한 후 동 기간 내에 계약이 이행되지 아니한 때 계약을 해제할 수 있다.
-③ “소비자” 또는 “시공업자”의 귀책사유로 계약이 해제된 경우 “소비자” 또는 “시공업자”는 다음 각 호의 규정에 의한 위약금을 상대방에게 지급하여야 한다.
-1. 계약 또는 계약 후 실측만 한 경우 : 총 공사금액의 ( 10 )%(단 총 공사금액의 11%를 초과할 수 없음)
-2. 제작 또는 공사에 착수한 경우 : 실 손해액 배상</p>
-      </div>
-
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제8조(공사변경 및 책임)</strong><br>
-① “시공업자”는 공사의 설계 및 자재변경 등으로 인하여 계약한 제품의 공급이 불가능할 경우 변경 시공할 내역을 “소비자”에게 통보하고, “소비자”와 협의한 후 동질․동가의 제품으로 시공할 수 있다. 다만, 이를 이유로 제3조 3항의 공사금액을 인상할 수 없다
-② “소비자”의 사정에 의하여 공사내용이 변경되는 경우 “소비자”와 “시공업자”는 협의하여 변경할 수 있고, 공사에 발생하는 추가비용 및 불법적 요소의 공사는 “소비자”가 책임진다.</p>
-      </div>
-
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제9조(양도양수)</strong><br>
-① “소비자”는 매매 등 계약의 이행에 영향을 미치는 사유가 발생하였을 때에는 “시공업자”에게 서면으로 통지하여야 한다.
-② “소비자”의 건축물에 대한 매매 등 소유권 이전이 발생한 경우 “소비자”와 “시공업자”는 본 계약이 소유권을 이전받는 자에게 승계되도록 노력하여야 한다. 다만, 본 계약이 승계되지 아니한 경우 “소비자” 또는 “시공업자”는 계약을 해제할 수 있고 “소비자”는 제7조 제2항에 따른 위약금을 “시공업자”에게 지급 하여야 한다.</p>
-      </div>
-
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제10조(하자보수)</strong><br>
-① “시공업자”는 공사완료 후, 균열, 누수, 파손 등의 하자가 발생하였을 때 다음 각 호에 해당하는 기간(이하 ‘무상 수리기간’)에는 무상 수리를 해주어야 한다. 다만 무상 수리기간 중 “소비자”의 사용상 부주의로 하자가 발생하여 “소비자”가 “시공업자”에게 수리를 청구한 경우, “시공업자”는 수리에 응하되 그 비용은 “소비자”가 부담한다.
-무상수리 기간 : 공사 종료 후 1 년 ( 전등, 수전등 소모품등 1년, 화장실 누수 3년)
-② “시공업자”는 무상 수리기간이 지난 후 발생한 하자에 대하여 “소비자”가 수리를 요청하는 경우 “소비자”의 비용 부담으로 유상수리 할 수 있다.
-③ “시공업자”가 공사에 사용한 제품이 계약서상의 규격에 미달할 경우 “소비자”는 “시공업자”에게 교체시공이나 공사금액 차액 환급 등의 손해배상을 “시공업자”에게 청구할 수 있다.</p>
-      </div>
-
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제11조(분쟁의 해결)</strong><br>
-이 계약서에서 규정하지 않은 사항과 해석에 관하여는 건설산업기본법, 약관의 규제 등에 관한 법률, 공정거래위원회가 정하는 소비자 보호지침 및 관계법령 또는 상관례에 따른다.</p>
-      </div>
-
-      <div class="contract-card contract-card-article">
-        <p class="contract-paragraph"><strong>제12조(관할법원)</strong><br>
-이 계약과 관련된 분쟁에 관한 소송은 민사소송법상의 관할법원에 제기하여야 한다.</p>
-      </div>
-
-      <div class="contract-card contract-card-sign">
-        <div class="contract-date-row">
-          <span id="contract_sign_year">2026</span> 년
-          <span id="contract_sign_month">4</span> 월
-          <span id="contract_sign_day">15</span> 일
-        </div>
-
-        <table class="contract-sign-table">
-          <colgroup>
-            <col style="width:18%;">
-            <col style="width:41%;">
-            <col style="width:41%;">
-          </colgroup>
-          <thead>
-            <tr>
-              <th></th>
-              <th>소비자</th>
-              <th>시공자</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th>주 소</th>
-              <td id="contract_customer_address">-</td>
-              <td id="contract_company_address">경기도 광명시 일직로99번안길 7 103호 AK디자인</td>
-            </tr>
-            <tr>
-              <th>연락처</th>
-              <td id="contract_customer_phone">-</td>
-              <td id="contract_company_phone">010-3038-4200</td>
-            </tr>
-            <tr>
-              <th>성 명</th>
-              <td id="contract_customer_name">-</td>
-              <td id="contract_company_ceo">김민석</td>
-            </tr>
-            <tr>
-              <th>상 호</th>
-              <td></td>
-              <td id="contract_company_name">AK디자인</td>
-            </tr>
-            <tr>
-              <th>사업자번호</th>
-              <td></td>
-              <td id="contract_company_bizno">143-12-01221</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div></div>
+    <section class="contract-card">
+      <table class="contract-sign-table">
+        <colgroup><col style="width:18%;"><col style="width:41%;"><col style="width:41%;"></colgroup>
+        <thead><tr><th></th><th>소비자</th><th>시공자</th></tr></thead>
+        <tbody>
+          <tr><th>주 소</th><td id="contract_customer_address">-</td><td id="contract_company_address">경기도 광명시 일직로99번안길 7 103호 AK디자인</td></tr>
+          <tr><th>연락처</th><td id="contract_customer_phone">-</td><td id="contract_company_phone">010-3677-0454</td></tr>
+          <tr><th>성 명</th><td id="contract_customer_name">-</td><td id="contract_company_ceo">김민석</td></tr>
+          <tr><th>상 호</th><td></td><td id="contract_company_name">AK디자인</td></tr>
+          <tr><th>사업자번호</th><td></td><td id="contract_company_bizno">143-12-01221</td></tr>
+          <tr><th>대표자</th><td></td><td id="contract_company_ceo_sign">김 민석 ( 서 명 )</td></tr>
+        </tbody>
+      </table>
+    </section>
   </div>
 </div>
 
 <div id="tab-company" class="hidden">
+
   <div class="card">
     <div class="card-header">회사관리</div>
     <div class="card-body">
@@ -701,140 +602,8 @@
   </div>
 </div>
 
-  </div>  <div id="pdfPrintArea" class="pdf-print-area">
-    <div class="pdf-sheet pdf-cover-sheet">
-      <div class="pdf-cover-inner">
-        <div>
-          <div class="pdf-cover-title">견 적 서</div>
-          
-        </div><div class="pdf-cover-box">
-      <div class="pdf-cover-row"><span>견적번호</span><strong id="cover_quote_no">-</strong></div>
-      <div class="pdf-cover-row"><span>작성일</span><strong id="cover_quote_date">-</strong></div>
-      <div class="pdf-cover-row"><span>고객명</span><strong id="cover_customer_name">-</strong></div>
-<div class="pdf-cover-row"><span>연락처</span><strong id="cover_customer_phone">-</strong></div>
-      <div class="pdf-cover-row"><span>현장명</span><strong id="cover_site_name">-</strong></div>
-      <div class="pdf-cover-row"><span>현장주소</span><strong id="cover_site_address">-</strong></div>
-      <div class="pdf-cover-row"><span>공사구분</span><strong id="cover_work_type">-</strong></div>
-    </div>
+  </div>  <div id="printArea" class="print-area"></div>
 
-    
-
-    <div class="pdf-cover-company-box">
-  <div class="pdf-cover-company-title">회사 정보</div>
-  <div class="pdf-cover-company-row">
-    <span>상호</span>
-    <strong>AK디자인</strong>
-  </div>
-<div class="pdf-cover-company-row">
-    <span>사업자번호</span>
-    <strong>143-12-01221</strong>
-  </div>
-
-  <div class="pdf-cover-company-row">
-    <span>대표</span>
-    <strong>김민석</strong>
-  </div>
-  <div class="pdf-cover-company-row">
-    <span>전화번호</span>
-    <strong>010-3677-0454</strong>
-  </div>
-  <div class="pdf-cover-company-row">
-    <span>주소</span>
-    <strong>경기도 광명시 일직로99번안길 7 103호</strong>
-  </div>
-</div>
-  </div>
-</div>
-
-<div class="pdf-sheet pdf-summary-sheet">
-  <div class="pdf-section-title">견적요약</div>
-  <div>견적번호 : <strong id="summary_quote_no">-</strong></div>
-  <div class="pdf-meta-line">
-     <div>작성일 : <strong id="summary_quote_date">-</strong></div>
-     <div>고객명 : <strong id="summary_customer_name">-</strong></div>
-    <div>현장주소 : <strong id="summary_site_address">-</strong></div>
-    
-  </div>
-
-  <table class="pdf-summary-table">
-    <thead>
-      <tr>
-        <th>공종명</th>
-        <th>금액</th>
-      </tr>
-    </thead>
-    <tbody id="pdfSummaryBody"></tbody>
-  </table>
-
-  <div class="pdf-summary-total-wrap">
-  <table class="pdf-summary-total-table">
-  <colgroup>
-    <col style="width: 50%;">
-    <col style="width: 50%;">
-  </colgroup>
-  <tbody>
-      <tr>
-        <th>직접공사비</th>
-        <td id="pdf_direct_cost" >₩ 0</td>
-      </tr>
-      <tr>
-        <th>간접공사비</th>
-        <td id="pdf_extra_cost">₩ 0</td>
-      </tr>
-     
-        <th>공급가액</th>
-        <td id="pdf_supply_amount">₩ 0</td>
-      </tr>
-      <tr>
-        <th>VAT</th>
-        <td id="pdf_vat_amount">₩ 0</td>
-      </tr>
-      <tr class="pdf-summary-total-final">
-        <th>총 합 계</th>
-        <td id="pdf_total_amount">₩ 0</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-  <div class="pdf-memo-box">
-    <div class="pdf-memo-title">비고</div>
-    <div class="pdf-memo-content" id="pdf_quote_memo">-</div>
-  </div>
-</div>
-
-<div class="pdf-sheet pdf-summary-sheet">
-  <div class="pdf-section-title">견적상세</div>
-<div><span>견적번호 : </span><strong id="pdf_quote_no">-</strong></div>
-  <div class="pdf-meta-line">
-
-    <div>작성일 : <strong id="pdf_quote_date">-</strong></div>
-    <div>고객명 : <strong id="pdf_customer_name">-</strong></div>
-    <div>현장주소: <strong id="pdf_site_address">-</strong></div>
-  </div>
-
-
- <div class="pdf-table-wrap">
-    <table class="pdf-table">
-     <thead>
-        <tr>
-          <th style="width:6%;">No</th>
-          <th style="width:25%;">품목명</th>
-          <th style="width:8%;">규격</th>
-          <th style="width:8%;">단위</th>
-          <th style="width:14%;">수량</th>
-          <th style="width:14%;">금액</th>
-          <th style="width:27%;">비고</th>
-        </tr>
-      </thead>
-      <tbody id="pdfDetailBody"></tbody>
-    </table>
-</div>
-  </div>
-  </div>  
-
-
-  
 <div id="companyAuthModal" class="modal-overlay">
   <div class="modal-card company-auth-card">
     <div class="modal-header">
@@ -863,8 +632,8 @@
 </div>
 
   <script src="app.js"></script>
-  <script src="erp_patch.js"></script>
-<script src="company.js"></script>
+<script src="contract.js"></script>
+  <script src="company.js"></script>
 
 </body>
 </html>

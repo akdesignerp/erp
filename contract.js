@@ -1,482 +1,337 @@
-
-/* 계약서 + 회사관리 비밀번호 확장 */
-let contractPayments = [];
-let companyAdminVerified = false;
-let companyPasswordMode = "verify";
-
-function setStatus(message, isError = false) {
-  const box = document.getElementById("statusBox");
-  if (!box) return;
-  box.textContent = message;
-  box.style.color = isError ? "#b91c1c" : "#111827";
-}
-
-function setCompanyPasswordStatus(message, isError = false, targetId = "companyAdminPasswordStatus") {
-  const el = document.getElementById(targetId);
-  if (!el) return;
-  el.textContent = message;
-  el.style.color = isError ? "#b91c1c" : "#111827";
-}
-
-function setText(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = value ?? "";
-}
-
-function formatDateLikeContract(dateStr) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return dateStr;
-  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
-}
-
-function todayStrSafe() {
-  return new Date().toISOString().substring(0, 10);
-}
-
-function getContractTotalAmount() {
-  if (typeof getQuoteTotals !== "function") return 0;
-  const totals = getQuoteTotals();
-  const vatType = document.getElementById("contract_vat_type")?.value || "include";
-  return vatType === "exclude" ? toNum(totals.totalConstruction) : toNum(totals.finalTotal);
-}
-
-function applyContractVatLabel() {
-  const vatType = String(document.getElementById("contract_vat_type")?.value || "include").trim();
-  const labelEl = document.getElementById("contract_vat_label");
-  if (!labelEl) return;
-  labelEl.textContent = vatType === "exclude" ? "부가가치세 불포함" : "부가가치세 포함";
-}
-
-function buildDefaultContractPayments() {
-  return [
-    { label: "1차", rate: 10, note: "계약 직후" },
-    { label: "2차", rate: 30, note: "철거 시작시" },
-    { label: "3차", rate: 30, note: "중간 공정 완료시" },
+(function(){
+  const DEFAULT_PAYMENTS = [
+    { label: "1차", rate: 10, note: "계약시" },
+    { label: "2차", rate: 30, note: "중간 지급" },
+    { label: "3차", rate: 30, note: "중간 지급" },
     { label: "잔금", rate: 30, note: "공사 완료후" }
   ];
-}
+  let contractPayments = [];
+  let latestCounselRows = [];
 
-function normalizeContractPaymentLabels() {
-  contractPayments.forEach((row, idx) => {
-    row.isBalance = idx === contractPayments.length - 1;
-    row.label = row.isBalance ? "잔금" : `${idx + 1}차`;
-  });
-}
-
-function renderContractPayments() {
-  const body = document.getElementById("contractPaymentBody");
-  if (!body) return;
-  normalizeContractPaymentLabels();
-  const total = getContractTotalAmount();
-
-  body.innerHTML = contractPayments.map((row, idx) => {
-    const amount = Math.round(total * (toNum(row.rate) / 100));
-    const readonly = row.isBalance ? "readonly" : "";
-    const deleteBtn = row.isBalance ? "" : `<button class="btn btn-light table-btn" type="button" onclick="removeContractPaymentRow(${idx})">삭제</button>`;
-    return `
-      <tr>
-        <td>${row.label}</td>
-        <td id="contract_payment_amount_${idx}" class="td-right">${formatWon(amount)}</td>
-        <td><input type="number" min="0" max="100" step="0.1" value="${toNum(row.rate)}" ${readonly} oninput="updateContractPaymentRate(${idx}, this.value)" /> %</td>
-        <td><input type="text" value="${escapeHtml(row.note || "")}" oninput="updateContractPaymentNote(${idx}, this.value)" /></td>
-        <td class="screen-only">${deleteBtn}</td>
-      </tr>
-    `;
-  }).join("");
-
-  recalcContractPayments();
-}
-
-function recalcContractPayments() {
-  const total = getContractTotalAmount();
-  normalizeContractPaymentLabels();
-
-  contractPayments.forEach((row, idx) => {
-    const amountEl = document.getElementById(`contract_payment_amount_${idx}`);
-    if (amountEl) {
-      const amount = Math.round(total * (toNum(row.rate) / 100));
-      amountEl.textContent = formatWon(amount);
+  function q(id){ return document.getElementById(id); }
+  function toNumSafe(v){ return Number(String(v ?? "").replace(/[^\d.-]/g, "").trim()) || 0; }
+  function formatWonSafe(num){ return "₩ " + Number(num || 0).toLocaleString("ko-KR"); }
+  function setText(id, value){ const el=q(id); if(el) el.textContent = value ?? ""; }
+  function setValue(id, value){ const el=q(id); if(el) el.value = value ?? ""; }
+  function escapeHtml(v){
+    return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function todayStrLocal(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function formatPlainNumber(num){ return Number(num || 0).toLocaleString("ko-KR"); }
+  function getCurrentAmountsSafe(){
+    try { if (typeof getCurrentAmounts === "function") return getCurrentAmounts(); } catch(e){}
+    return { supplyAmount: 0, vatAmount: 0, totalAmount: 0 };
+  }
+  function getManualContractTotal(){
+    const raw = String(q("contract_total_amount_input")?.value || "").replace(/[^\d]/g, "").trim();
+    return raw ? toNumSafe(raw) : null;
+  }
+  function getEstimatedContractBaseTotal(){
+    try {
+      if (typeof currentQuoteDbTotalAmount !== "undefined" && toNumSafe(currentQuoteDbTotalAmount) > 0) {
+        return toNumSafe(currentQuoteDbTotalAmount);
+      }
+    } catch(e){}
+    const amounts = getCurrentAmountsSafe();
+    return toNumSafe(amounts.totalAmount);
+  }
+  function getContractBaseTotal(){
+    return getEstimatedContractBaseTotal();
+  }
+  function formatDateLabel(dateStr){
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
+  }
+  function setStatusBox(msg, isErr){
+    const box = q("statusBox");
+    if (!box) return;
+    box.textContent = msg;
+    box.style.color = isErr ? "#b91c1c" : "#111827";
+  }
+  function resetContractPayments(){
+    contractPayments = DEFAULT_PAYMENTS.map(x => ({...x}));
+    buildContractPaymentRows();
+  }
+  function renumberContractLabels(){
+    const lastIndex = contractPayments.length - 1;
+    contractPayments.forEach((row, idx) => {
+      row.label = idx === lastIndex ? "잔금" : `${idx+1}차`;
+    });
+  }
+  function findLargestRateIndex(){
+    let bestIdx = contractPayments.length ? contractPayments.length - 1 : -1;
+    let bestRate = -1;
+    contractPayments.forEach((row, idx) => {
+      if (idx === contractPayments.length - 1) return;
+      const rate = toNumSafe(row.rate);
+      if (rate > bestRate) { bestRate = rate; bestIdx = idx; }
+    });
+    return bestIdx;
+  }
+  function autoBalanceContractRates(changedIdx){
+    const lastIdx = contractPayments.length - 1;
+    if (changedIdx === lastIdx) return;
+    let sumExceptLast = 0;
+    contractPayments.forEach((row, idx) => {
+      if (idx === lastIdx) return;
+      row.rate = Math.max(0, toNumSafe(row.rate));
+      sumExceptLast += row.rate;
+    });
+    const remain = Math.max(0, 100 - sumExceptLast);
+    contractPayments[lastIdx].rate = remain;
+    const lastInput = document.querySelector(`.contract-pay-rate[data-idx="${lastIdx}"]`);
+    if (lastInput) lastInput.value = String(remain);
+  }
+  window.recalcContractPayments = function(){
+    const total = getContractBaseTotal();
+    let allocated = 0;
+    let rateSum = 0;
+    contractPayments.forEach((row, idx) => {
+      const rate = Math.max(0, toNumSafe(row.rate));
+      row.rate = rate;
+      rateSum += rate;
+      let amount = Math.round(total * (rate / 100));
+      if (idx === contractPayments.length - 1) amount = total - allocated;
+      else allocated += amount;
+      setText(`contract_payment_amount_${idx}`, formatWonSafe(amount));
+    });
+    setStatusBox(rateSum === 100 ? "계약 비율 합계 100% 입니다." : `계약 비율 합계 ${rateSum}% 입니다.`, rateSum !== 100);
+  };
+  function buildContractPaymentRows(){
+    const body = q("contractPaymentBody");
+    if (!body) return;
+    const totalRow = body.querySelector(".contract-total-row");
+    body.innerHTML = "";
+    if (totalRow) body.appendChild(totalRow);
+    contractPayments.forEach((row, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input class="contract-pay-label" data-idx="${idx}" value="${escapeHtml(row.label)}"></td>
+        <td id="contract_payment_amount_${idx}">₩ 0</td>
+        <td><div class="contract-rate-wrap"><input class="contract-pay-rate" data-idx="${idx}" type="text" inputmode="numeric" value="${Number(row.rate || 0)}"><span class="contract-rate-unit">%</span></div></td>
+        <td>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input class="contract-pay-note" data-idx="${idx}" type="text" value="${escapeHtml(row.note)}" style="flex:1;">
+            ${idx === contractPayments.length - 1 ? "" : `<button class="btn btn-light screen-only" type="button" onclick="removeContractPaymentRow(${idx})">삭제</button>`}
+          </div>
+        </td>`;
+      body.appendChild(tr);
+    });
+    body.querySelectorAll(".contract-pay-rate").forEach(el => {
+      const handler = (e) => {
+        const idx = Number(e.target.dataset.idx);
+        e.target.value = String(e.target.value || '').replace(/[^\d.]/g, '');
+        contractPayments[idx].rate = toNumSafe(e.target.value);
+        autoBalanceContractRates(idx);
+        recalcContractPayments();
+      };
+      el.addEventListener("input", handler);
+      el.addEventListener("change", handler);
+    });
+    body.querySelectorAll(".contract-pay-note").forEach(el => el.addEventListener("input", e => contractPayments[Number(e.target.dataset.idx)].note = e.target.value));
+    body.querySelectorAll(".contract-pay-label").forEach(el => el.addEventListener("input", e => contractPayments[Number(e.target.dataset.idx)].label = e.target.value));
+    recalcContractPayments();
+  }
+  window.addContractPaymentRow = function(){
+    if (!contractPayments.length) resetContractPayments();
+    const targetIndex = findLargestRateIndex();
+    if (targetIndex < 0) {
+      contractPayments.splice(Math.max(contractPayments.length - 1, 0), 0, { label: `${contractPayments.length}차`, rate: 0, note: "" });
+      buildContractPaymentRows();
+      return;
     }
-  });
-}
+    const target = contractPayments[targetIndex];
+    const splitRate = Math.floor(Number(target.rate || 0) / 2);
+    target.rate = Number(target.rate || 0) - splitRate;
+    contractPayments.splice(targetIndex, 0, { label: `${contractPayments.length}차`, rate: splitRate, note: "추가 분할" });
+    renumberContractLabels();
+    buildContractPaymentRows();
+  };
+  window.removeContractPaymentRow = function(idx){
+    if (idx < 0 || idx >= contractPayments.length - 1) return;
+    const removed = contractPayments.splice(idx, 1)[0];
+    const largest = findLargestRateIndex();
+    if (largest >= 0) contractPayments[largest].rate = toNumSafe(contractPayments[largest].rate) + toNumSafe(removed.rate);
+    renumberContractLabels();
+    buildContractPaymentRows();
+  };
 
-function rebalanceBalancePayment() {
-  normalizeContractPaymentLabels();
-  if (!contractPayments.length) return;
-  const balanceIndex = contractPayments.length - 1;
-  const othersSum = contractPayments.slice(0, balanceIndex).reduce((sum, row) => sum + toNum(row.rate), 0);
-  contractPayments[balanceIndex].rate = Math.max(0, Math.round((100 - othersSum) * 100) / 100);
-}
-
-function updateContractPaymentRate(idx, value) {
-  if (!contractPayments[idx]) return;
-  if (contractPayments[idx].isBalance) return;
-  contractPayments[idx].rate = Math.max(0, Math.round(toNum(value) * 100) / 100);
-  rebalanceBalancePayment();
-  renderContractPayments();
-}
-
-function updateContractPaymentNote(idx, value) {
-  if (!contractPayments[idx]) return;
-  contractPayments[idx].note = value;
-}
-
-function rebalanceContractByLargest() {
-  if (contractPayments.length < 2) return;
-  normalizeContractPaymentLabels();
-  const candidates = contractPayments.slice(0, -1);
-  if (!candidates.length) return;
-
-  let targetIndex = 0;
-  let largestRate = -1;
-  candidates.forEach((row, idx) => {
-    const rate = toNum(row.rate);
-    if (rate > largestRate) {
-      largestRate = rate;
-      targetIndex = idx;
-    }
-  });
-
-  const targetRate = toNum(contractPayments[targetIndex].rate);
-  if (targetRate <= 0) {
-    rebalanceBalancePayment();
-    renderContractPayments();
-    return;
-  }
-
-  const splitRate = Math.round((targetRate / 2) * 100) / 100;
-  contractPayments[targetIndex].rate = Math.round((targetRate - splitRate) * 100) / 100;
-
-  const insertIndex = contractPayments.length - 1;
-  contractPayments.splice(insertIndex, 0, {
-    label: "",
-    rate: splitRate,
-    note: `${targetIndex + 1}차 분할`
-  });
-
-  rebalanceBalancePayment();
-  renderContractPayments();
-  setStatus("비율이 가장 큰 차수를 기준으로 새 행을 자동 분할했습니다.");
-}
-
-function addContractPaymentRow() {
-  if (!contractPayments.length) {
-    contractPayments = buildDefaultContractPayments();
-    renderContractPayments();
-    return;
-  }
-  rebalanceContractByLargest();
-}
-
-function removeContractPaymentRow(idx) {
-  if (idx < 0 || idx >= contractPayments.length) return;
-  if (contractPayments[idx].isBalance) return;
-  contractPayments.splice(idx, 1);
-  rebalanceBalancePayment();
-  renderContractPayments();
-}
-
-function fillContractFromRecord(quote, customer, site) {
-  const quoteNo = quote?.quote_no || document.getElementById("quote_no")?.value || "";
-  const quoteDate = quote?.quote_date || document.getElementById("quote_date")?.value || todayStrSafe();
-  const customerName = customer?.customer_name || customer?.name || document.getElementById("customer_name")?.value || "";
-  const customerPhone = customer?.phone || document.getElementById("customer_phone")?.value || "";
-  const customerAddress = customer?.address || document.getElementById("customer_address")?.value || site?.site_address || "";
-  const siteAddress = site?.site_address || document.getElementById("site_address")?.value || customerAddress || "";
-  const contractTotal = getContractTotalAmount();
-
-  const contractQuoteInput = document.getElementById("contract_quote_no_input");
-  if (contractQuoteInput) contractQuoteInput.value = quoteNo;
-
-  setText("contract_site_address", siteAddress || "-");
-  setText("contract_start_date", formatDateLikeContract(document.getElementById("contract_start_date_input")?.value || ""));
-  setText("contract_end_date", formatDateLikeContract(document.getElementById("contract_end_date_input")?.value || ""));
-  setText("contract_total_amount", formatWon(contractTotal));
-
-  const d = new Date(quoteDate || todayStrSafe());
-  if (!Number.isNaN(d.getTime())) {
-    setText("contract_sign_year", d.getFullYear());
-    setText("contract_sign_month", d.getMonth() + 1);
-    setText("contract_sign_day", d.getDate());
-  }
-
-  setText("contract_customer_address", customerAddress || "-");
-  setText("contract_customer_phone", customerPhone || "-");
-  setText("contract_customer_name", customerName || "-");
-
-  applyContractVatLabel();
-  recalcContractPayments();
-}
-
-function syncContractFromQuote() {
-  try {
-    const quote = {
-      quote_no: document.getElementById("quote_no")?.value || "",
-      quote_date: document.getElementById("quote_date")?.value || todayStrSafe()
+  function getContractStoragePayload(){
+    return {
+      quote_no: q("quote_no")?.value || "",
+      vat_type: q("contract_vat_type")?.value || "10",
+      start_date: q("contract_start_date_input")?.value || "",
+      end_date: q("contract_end_date_input")?.value || "",
+      manual_total: getManualContractTotal(),
+      payments: contractPayments,
+      account_info: q("contract_account_info")?.textContent || "",
+      scope_text: q("contract_scope_text")?.textContent || "",
+      saved_at: new Date().toISOString()
     };
-    const customer = {
-      customer_name: document.getElementById("customer_name")?.value || document.getElementById("topCustomerName")?.textContent || "",
-      phone: document.getElementById("customer_phone")?.value || "",
-      address: document.getElementById("customer_address")?.value || ""
-    };
-    const site = {
-      site_address: document.getElementById("site_address")?.value || ""
-    };
-
-    fillContractFromRecord(quote, customer, site);
-    setStatus("현재 견적 입력값을 계약서에 반영했습니다.");
-  } catch (err) {
-    console.error(err);
-    setStatus("계약서 반영 실패: " + err.message, true);
   }
-}
+  async function saveContractToDb(payload){
+    if (typeof db === "undefined" || !payload.quote_no) return false;
+    const { error } = await db.from("quote_contracts").upsert([{ quote_no: payload.quote_no, vat_type: payload.vat_type, start_date: payload.start_date || null, end_date: payload.end_date || null, manual_total: payload.manual_total || 0, payments_json: payload.payments, account_info: payload.account_info, scope_text: payload.scope_text, updated_at: new Date().toISOString() }], { onConflict: "quote_no" });
+    if (error) throw error;
+    return true;
+  }
+  async function loadContractFromDb(quoteNo){
+    if (typeof db === "undefined" || !quoteNo) return null;
+    const { data, error } = await db.from("quote_contracts").select("*").eq("quote_no", quoteNo).maybeSingle();
+    if (error) throw error;
+    return data || null;
+  }
+  function saveContractToLocal(payload){ if (payload.quote_no) localStorage.setItem(`ak_contract_${payload.quote_no}`, JSON.stringify(payload)); }
+  function loadContractFromLocal(quoteNo){ try { return JSON.parse(localStorage.getItem(`ak_contract_${quoteNo}`) || "null"); } catch(e){ return null; } }
+  function applyContractPayload(row){
+    if (!row) return;
+    setValue("contract_vat_type", row.vat_type || "10");
+    setValue("contract_start_date_input", row.start_date || "");
+    setValue("contract_end_date_input", row.end_date || "");
+    setValue("contract_total_amount_input", row.manual_total ? formatPlainNumber(row.manual_total) : "");
+    if (row.account_info) setText("contract_account_info", row.account_info);
+    if (row.scope_text) setText("contract_scope_text", row.scope_text);
+    contractPayments = Array.isArray(row.payments_json) ? row.payments_json.map(x => ({...x})) : Array.isArray(row.payments) ? row.payments.map(x => ({...x})) : DEFAULT_PAYMENTS.map(x => ({...x}));
+    if (!contractPayments.length) contractPayments = DEFAULT_PAYMENTS.map(x => ({...x}));
+    renumberContractLabels();
+    buildContractPaymentRows();
+  }
+  window.saveContract = async function(){
+    syncContractFromEstimate(false);
+    setStatusBox("계약서 값 수정 저장은 사용하지 않습니다. 견적 불러오기 값으로 표시합니다.");
+  };
+  window.loadContractByQuoteNo = async function(quoteNo){
+    if (!quoteNo) return;
+    resetContractPayments();
+    syncContractFromEstimate(false);
+  };
+  window.syncContractFromEstimate = function(updateStatus = true){
+    if (!contractPayments.length) resetContractPayments();
+    setValue("contract_quote_no_input", q("quote_no")?.value || "");
+    setText("contract_vat_label", (q("contract_vat_type")?.value || "10") === "0" ? "부가가치세 불포함" : "부가가치세 포함");
+    const estimatedTotal = getEstimatedContractBaseTotal();
+    setValue("contract_total_amount_input", formatPlainNumber(estimatedTotal));
+    const totalInputEl = q("contract_total_amount_input");
+    if (totalInputEl) totalInputEl.setAttribute("readonly", "readonly");
+    setText("contract_site_address", q("site_address")?.value || "-");
+    setText("contract_start_date", formatDateLabel(q("contract_start_date_input")?.value || ""));
+    setText("contract_end_date", formatDateLabel(q("contract_end_date_input")?.value || ""));
+    setText("contract_customer_name", q("customer_name")?.value || "-");
+    setText("contract_customer_phone", q("customer_phone")?.value || "-");
+    setText("contract_customer_address", q("customer_address")?.value || q("site_address")?.value || "-");
+    const today = new Date();
+    setText("contract_sign_year", today.getFullYear());
+    setText("contract_sign_month", today.getMonth() + 1);
+    setText("contract_sign_day", today.getDate());
+    setText("contract_company_phone", "010-3677-0454");
+    recalcContractPayments();
+    if (updateStatus) setStatusBox("현재 견적 내용을 계약서에 반영했습니다.");
+  };
 
-async function hashCompanyPassword(password) {
-  const enc = new TextEncoder().encode(String(password || ""));
-  const buffer = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-}
-
-async function getCompanyAdminRow() {
-  const { data, error } = await db
-    .from("company_admin_auth")
-    .select("*")
-    .eq("id", 1)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data || null;
-}
-
-function openCompanyPasswordModal(mode = "verify") {
-  companyPasswordMode = mode;
-  const modal = document.getElementById("companyPasswordModal");
-  if (!modal) return;
-  modal.classList.add("show");
-
-  const help = document.getElementById("companyPasswordHelp");
-  if (help) {
-    if (mode === "register") {
-      help.textContent = "최초 비밀번호를 DB에 저장합니다. 새 비밀번호 입력 후 등록하세요.";
-    } else if (mode === "change") {
-      help.textContent = "기존 비밀번호 확인 후 새 비밀번호로 변경합니다.";
-    } else {
-      help.textContent = "DB 저장 비밀번호를 입력해 회사관리 탭을 여세요.";
+  function setCounselStatus(msg, isErr){
+    const box = q("counselStatusBox");
+    if (!box) return;
+    box.textContent = msg;
+    box.style.color = isErr ? "#b91c1c" : "#111827";
+  }
+  window.syncCounselFromEstimate = function(updateStatus = true){
+    setValue("counsel_date", q("quote_date")?.value || todayStrLocal());
+    setValue("counsel_name", q("customer_name")?.value || "");
+    setValue("counsel_phone", q("customer_phone")?.value || "");
+    setValue("counsel_site_name", q("site_name")?.value || "");
+    setValue("counsel_site_address", q("site_address")?.value || "");
+    if (updateStatus) setCounselStatus("현재 견적 정보로 상담일지를 채웠습니다.");
+  };
+  function pickCounselDate(row){ return row?.counsel_date || row?.quote_date || row?.consult_date || row?.date || row?.created_at || row?.updated_at || ""; }
+  function pickCounselMemo(row){ return row?.counsel_note || row?.memo || row?.content || row?.note || row?.description || ""; }
+  function sameAddress(a,b){ const aa = String(a || '').trim(), bb = String(b || '').trim(); return !!aa && !!bb && (aa === bb || aa.includes(bb) || bb.includes(aa)); }
+  async function fetchCounselRowsRaw(){
+    const result = await db.from("quote_counsel_logs").select("*").limit(500);
+    if (result.error) throw result.error;
+    const rows = Array.isArray(result.data) ? result.data : [];
+    return rows.filter(r => r && (r.site_address || r.site_name || r.customer_name)).sort((a,b) => String(pickCounselDate(b)).localeCompare(String(pickCounselDate(a))));
+  }
+  function renderCounselList(rows){
+    const box = q("counselListBox");
+    const address = (q("counsel_site_address")?.value || q("site_address")?.value || "").trim();
+    if (!box) return;
+    if (!rows.length) {
+      box.innerHTML = `<div class="empty">${address ? `해당 현장주소(${escapeHtml(address)})의 상담일지가 없습니다.` : '저장된 상담일지가 없습니다.'}</div>`;
+      return;
     }
+    box.innerHTML = rows.map((row, idx) => {
+      const date = String(pickCounselDate(row) || '').slice(0,10) || '-';
+      return `<button type="button" class="counsel-list-item" onclick="loadCounselLogByIndex(${idx})"><div class="counsel-list-top"><span>${date}</span><span>${escapeHtml(row.quote_status || row.status || '')}</span></div><div class="counsel-list-sub">${escapeHtml(row.customer_name || '-')}</div></button>`;
+    }).join("");
   }
+  function applyCounselRow(row){
+    if (!row) return;
+    setValue("counsel_date", String(pickCounselDate(row) || "").slice(0,10));
+    setValue("counsel_name", row.customer_name || "");
+    setValue("counsel_phone", row.customer_phone || row.phone || "");
+    setValue("counsel_site_name", row.site_name || q("site_name")?.value || "");
+    setValue("counsel_site_address", row.site_address || "");
+    setValue("counsel_memo", pickCounselMemo(row));
+    setCounselStatus("상담일지를 불러왔습니다.");
+  }
+  window.loadCounselLogByIndex = function(idx){ applyCounselRow(latestCounselRows[idx]); };
+  window.loadCounselLogList = async function(){
+    try {
+      const currentAddress = (q("counsel_site_address")?.value || q("site_address")?.value || "").trim();
+      const rows = await fetchCounselRowsRaw();
+      latestCounselRows = currentAddress ? rows.filter(row => sameAddress(row.site_address, currentAddress)) : rows;
+      renderCounselList(latestCounselRows);
+    } catch (err) {
+      console.error(err);
+      setCounselStatus("상담일지 목록 불러오기 실패: " + err.message, true);
+    }
+  };
+  function buildCounselPayload(){
+    const selectedStatus = q("quote_status")?.value || q("topQuoteStatus")?.textContent || "";
+    return { quote_no: q("quote_no")?.value || "", customer_name: q("counsel_name")?.value || "", customer_phone: q("counsel_phone")?.value || "", phone: q("counsel_phone")?.value || "", site_name: q("counsel_site_name")?.value || "", site_address: q("counsel_site_address")?.value || "", counsel_date: q("counsel_date")?.value || null, memo: q("counsel_memo")?.value || "", quote_status: selectedStatus, updated_at: new Date().toISOString(), created_at: new Date().toISOString() };
+  }
+  window.saveCounselLog = async function(){
+    try {
+      const payload = buildCounselPayload();
+      if (!payload.quote_no) throw new Error("견적번호가 없습니다.");
+      if (!payload.site_address) throw new Error("현장주소가 없습니다.");
+      if (!payload.counsel_date) throw new Error("상담일자를 입력하세요.");
+      const rows = await fetchCounselRowsRaw();
+      const existing = rows.find(r => String(r.quote_no || "").trim() === payload.quote_no && String(pickCounselDate(r) || "").slice(0,10) === payload.counsel_date && sameAddress(r.site_address, payload.site_address));
+      const result = existing ? await db.from("quote_counsel_logs").update(payload).eq("id", existing.id) : await db.from("quote_counsel_logs").insert([payload]);
+      if (result.error) throw result.error;
+      setCounselStatus(existing ? "같은 현장/같은 날짜 상담일지를 수정 저장했습니다." : "상담일지를 저장했습니다.");
+      await loadCounselLogList();
+    } catch (err) {
+      console.error(err);
+      setCounselStatus("상담일지 저장 실패: " + err.message, true);
+    }
+  };
 
-  ["companyAdminCurrentPassword", "companyAdminNewPassword", "companyAdminConfirmPassword"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = "";
+  document.addEventListener("DOMContentLoaded", () => {
+    resetContractPayments();
+    syncContractFromEstimate(false);
+    syncCounselFromEstimate(false);
+    loadCounselLogList().catch(() => {});
+    ["contract_total_amount_input","contract_vat_type","contract_start_date_input","contract_end_date_input","quote_date","quote_no","customer_name","customer_phone","customer_address","site_address","site_name","vat_type","quote_status"].forEach(id => {
+      const el = q(id);
+      if (!el || el.dataset.contractBound) return;
+      el.dataset.contractBound = "1";
+      el.addEventListener("input", () => { syncContractFromEstimate(false); syncCounselFromEstimate(false); });
+      el.addEventListener("change", () => { syncContractFromEstimate(false); syncCounselFromEstimate(false); if (id === "site_address") loadCounselLogList().catch(() => {}); });
+    });
+    const totalInput = q("contract_total_amount_input");
+    if (totalInput) {
+      totalInput.addEventListener("input", () => { totalInput.value = String(totalInput.value || "").replace(/[^\d]/g, ""); recalcContractPayments(); });
+      totalInput.addEventListener("blur", () => { totalInput.value = formatPlainNumber(toNumSafe(totalInput.value)); recalcContractPayments(); });
+    }
   });
-
-  setCompanyPasswordStatus("대기 중");
-}
-
-function closeCompanyPasswordModal() {
-  const modal = document.getElementById("companyPasswordModal");
-  if (modal) modal.classList.remove("show");
-}
-
-async function verifyCompanyAdminPassword() {
-  try {
-    const currentPw = document.getElementById("companyAdminCurrentPassword")?.value?.trim() || "";
-    const newPw = document.getElementById("companyAdminNewPassword")?.value?.trim() || "";
-    const confirmPw = document.getElementById("companyAdminConfirmPassword")?.value?.trim() || "";
-
-    const row = await getCompanyAdminRow();
-
-    if (companyPasswordMode === "register") {
-      if (row?.password_hash) {
-        setCompanyPasswordStatus("이미 등록된 비밀번호가 있습니다. 변경 기능을 사용하세요.", true);
-        return;
-      }
-      if (!newPw || !confirmPw) {
-        setCompanyPasswordStatus("새 비밀번호와 확인 비밀번호를 입력하세요.", true);
-        return;
-      }
-      if (newPw !== confirmPw) {
-        setCompanyPasswordStatus("새 비밀번호 확인이 일치하지 않습니다.", true);
-        return;
-      }
-
-      const passwordHash = await hashCompanyPassword(newPw);
-      const { error } = await db.from("company_admin_auth").upsert({
-        id: 1,
-        password_hash: passwordHash,
-        updated_at: new Date().toISOString()
-      });
-      if (error) throw error;
-
-      setCompanyPasswordStatus("최초 관리자 비밀번호를 저장했습니다.");
-      setCompanyPasswordStatus("최초 관리자 비밀번호가 등록되었습니다.", false, "companyAdminDbStatus");
-      companyAdminVerified = true;
-      closeCompanyPasswordModal();
-      showCompanyTabDirect();
-      return;
-    }
-
-    if (!row?.password_hash) {
-      setCompanyPasswordStatus("DB에 등록된 관리자 비밀번호가 없습니다. 최초등록을 먼저 진행하세요.", true);
-      setCompanyPasswordStatus("company_admin_auth 테이블에 비밀번호가 없습니다. 최초등록이 필요합니다.", true, "companyAdminDbStatus");
-      return;
-    }
-
-    if (!currentPw) {
-      setCompanyPasswordStatus("현재 비밀번호를 입력하세요.", true);
-      return;
-    }
-
-    const currentHash = await hashCompanyPassword(currentPw);
-    if (currentHash !== row.password_hash) {
-      setCompanyPasswordStatus("현재 비밀번호가 일치하지 않습니다.", true);
-      return;
-    }
-
-    if (companyPasswordMode === "change") {
-      if (!newPw || !confirmPw) {
-        setCompanyPasswordStatus("새 비밀번호와 확인 비밀번호를 입력하세요.", true);
-        return;
-      }
-      if (newPw !== confirmPw) {
-        setCompanyPasswordStatus("새 비밀번호 확인이 일치하지 않습니다.", true);
-        return;
-      }
-
-      const nextHash = await hashCompanyPassword(newPw);
-      const { error } = await db.from("company_admin_auth").update({
-        password_hash: nextHash,
-        updated_at: new Date().toISOString()
-      }).eq("id", 1);
-
-      if (error) throw error;
-
-      setCompanyPasswordStatus("관리자 비밀번호를 변경했습니다.");
-      setCompanyPasswordStatus("관리자 비밀번호 변경 완료", false, "companyAdminDbStatus");
-      companyAdminVerified = true;
-      closeCompanyPasswordModal();
-      showCompanyTabDirect();
-      return;
-    }
-
-    companyAdminVerified = true;
-    setCompanyPasswordStatus("관리자 비밀번호 확인 완료");
-    setCompanyPasswordStatus("비밀번호 확인 완료. 회사관리 탭 접근 가능", false, "companyAdminDbStatus");
-    closeCompanyPasswordModal();
-    showCompanyTabDirect();
-  } catch (err) {
-    console.error(err);
-    setCompanyPasswordStatus("비밀번호 처리 실패: " + err.message, true);
-    setCompanyPasswordStatus("DB 테이블 확인 필요: company_admin_auth", true, "companyAdminDbStatus");
-  }
-}
-
-function showCompanyTabDirect() {
-  document.querySelectorAll("#tab-write,#tab-summary,#tab-detail,#tab-counsel,#tab-contract,#tab-company").forEach(el => el?.classList.add("hidden"));
-  document.getElementById("tab-company")?.classList.remove("hidden");
-  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-  if (typeof initCompanyTab === "function") initCompanyTab();
-}
-
-function renderCounselPdf() {
-  setText("pdf_counsel_date", document.getElementById("counsel_date")?.value || "-");
-  setText("pdf_counsel_type", document.getElementById("counsel_type")?.value || "-");
-  setText("pdf_counsel_status", document.getElementById("counsel_status")?.value || "-");
-  const note = [
-    document.getElementById("counsel_note")?.value || "",
-    document.getElementById("counsel_next_action")?.value ? `다음 일정: ${document.getElementById("counsel_next_action").value}` : ""
-  ].filter(Boolean).join("\n\n");
-  setText("pdf_counsel_note", note || "-");
-}
-
-function renderContractPdfClone() {
-  syncContractFromQuote();
-  const source = document.getElementById("contractSheet");
-  const wrap = document.getElementById("pdfContractPrintWrap");
-  if (!source || !wrap) return;
-  wrap.innerHTML = source.outerHTML;
-}
-
-function initContractTab() {
-  if (!contractPayments.length) {
-    contractPayments = buildDefaultContractPayments();
-    rebalanceBalancePayment();
-  }
-
-  const quoteNoInput = document.getElementById("contract_quote_no_input");
-  if (quoteNoInput && !quoteNoInput.value) {
-    quoteNoInput.value = document.getElementById("quote_no")?.value || "";
-  }
-
-  const startDateInput = document.getElementById("contract_start_date_input");
-  if (startDateInput && !startDateInput.value) startDateInput.value = document.getElementById("quote_date")?.value || todayStrSafe();
-  const endDateInput = document.getElementById("contract_end_date_input");
-  if (endDateInput && !endDateInput.value) endDateInput.value = document.getElementById("quote_date")?.value || todayStrSafe();
-
-  renderContractPayments();
-  syncContractFromQuote();
-}
-
-const originalShowTab = typeof showTab === "function" ? showTab : null;
-showTab = function(tabName) {
-  const tabIds = ["write", "summary", "detail", "counsel", "contract", "company"];
-  tabIds.forEach(name => document.getElementById(`tab-${name}`)?.classList.add("hidden"));
-  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-
-  if (tabName === "company") {
-    if (!companyAdminVerified) {
-      openCompanyPasswordModal("verify");
-      return;
-    }
-    showCompanyTabDirect();
-    return;
-  }
-
-  document.getElementById(`tab-${tabName}`)?.classList.remove("hidden");
-  document.querySelector(`.tab-btn[data-tab="${tabName}"]`)?.classList.add("active");
-
-  if (tabName === "summary" || tabName === "detail") {
-    if (typeof renderPreviewTables === "function") renderPreviewTables();
-  }
-  if (tabName === "contract") {
-    initContractTab();
-  }
-};
-
-const originalPrintQuote = typeof printQuote === "function" ? printQuote : null;
-printQuote = function() {
-  try {
-    if (typeof fillPdfData === "function") fillPdfData();
-    renderCounselPdf();
-    renderContractPdfClone();
-    window.print();
-  } catch (err) {
-    console.error("PDF 인쇄 오류:", err);
-    alert("PDF 인쇄용 데이터 채우기 중 오류: " + err.message);
-  }
-};
-
-const originalResetQuoteForm = typeof resetQuoteForm === "function" ? resetQuoteForm : null;
-resetQuoteForm = function() {
-  if (originalResetQuoteForm) originalResetQuoteForm();
-  const counselDate = document.getElementById("counsel_date");
-  if (counselDate) counselDate.value = todayStrSafe();
-  const counselType = document.getElementById("counsel_type");
-  if (counselType) counselType.value = "초기상담";
-  const counselStatus = document.getElementById("counsel_status");
-  if (counselStatus) counselStatus.value = "상담중";
-  const nextAction = document.getElementById("counsel_next_action");
-  if (nextAction) nextAction.value = "";
-  const counselNote = document.getElementById("counsel_note");
-  if (counselNote) counselNote.value = "";
-  contractPayments = buildDefaultContractPayments();
-  rebalanceBalancePayment();
-  initContractTab();
-};
-
-document.addEventListener("DOMContentLoaded", () => {
-  const counselDate = document.getElementById("counsel_date");
-  if (counselDate && !counselDate.value) counselDate.value = todayStrSafe();
-  initContractTab();
-});
+})();
