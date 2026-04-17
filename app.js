@@ -1397,10 +1397,151 @@ function fillPdfData() {
 }
 
 
+function buildCounselPrintSheet() {
+  const date = document.getElementById("counsel_date")?.value || document.getElementById("quote_date")?.value || "-";
+  const name = document.getElementById("counsel_name")?.value || document.getElementById("customer_name")?.value || "-";
+  const phone = document.getElementById("counsel_phone")?.value || document.getElementById("customer_phone")?.value || "-";
+  const siteName = document.getElementById("counsel_site_name")?.value || document.getElementById("site_name")?.value || "-";
+  const siteAddress = document.getElementById("counsel_site_address")?.value || document.getElementById("site_address")?.value || "-";
+  const memo = document.getElementById("counsel_memo")?.value || "-";
+  const status = document.getElementById("quote_status")?.value || document.getElementById("topQuoteStatus")?.textContent || "-";
+  return `
+    <div class="pdf-sheet pdf-summary-sheet counsel-print-sheet">
+      <div class="pdf-section-title">상담일지</div>
+      <div class="counsel-print-card">
+        <div class="counsel-print-grid">
+          <div class="counsel-print-item">
+            <div class="counsel-print-label">상담일자</div>
+            <div class="counsel-print-value">${date || '-'}</div>
+          </div>
+          <div class="counsel-print-item">
+            <div class="counsel-print-label">성함</div>
+            <div class="counsel-print-value">${name || '-'}</div>
+          </div>
+          <div class="counsel-print-item">
+            <div class="counsel-print-label">전화번호</div>
+            <div class="counsel-print-value">${phone || '-'}</div>
+          </div>
+          <div class="counsel-print-item">
+            <div class="counsel-print-label">현장명</div>
+            <div class="counsel-print-value">${siteName || '-'}</div>
+          </div>
+          <div class="counsel-print-item full">
+            <div class="counsel-print-label">현장주소</div>
+            <div class="counsel-print-value">${siteAddress || '-'}</div>
+          </div>
+          <div class="counsel-print-item full">
+            <div class="counsel-print-label">견적상태</div>
+            <div class="counsel-print-value">${status || '-'}</div>
+          </div>
+        </div>
+        <div class="counsel-print-memo pdf-memo-box">
+          <div class="pdf-memo-title">상담내용</div>
+          <div class="pdf-memo-content">${(memo || "-").split("\n").join("<br>")}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function ensurePdfExtraSheets() {
+  const area = document.getElementById("pdfPrintArea");
+  if (!area) return null;
+  let extra = document.getElementById("pdfExtraSheets");
+  if (!extra) {
+    extra = document.createElement("div");
+    extra.id = "pdfExtraSheets";
+    area.appendChild(extra);
+  }
+  return extra;
+}
+
 function printQuote() {
   try {
     fillPdfData();
-    window.print();
+    if (typeof syncContractFromEstimate === "function") syncContractFromEstimate();
+    if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
+
+    const printArea = document.getElementById("pdfPrintArea");
+    if (!printArea) throw new Error("PDF 출력 영역을 찾을 수 없습니다.");
+
+    const cloned = printArea.cloneNode(true);
+    const oldExtra = cloned.querySelector("#pdfExtraSheets");
+    if (oldExtra) oldExtra.remove();
+
+    const extra = document.createElement("div");
+    extra.id = "pdfExtraSheets";
+    extra.innerHTML = buildCounselPrintSheet() + (typeof buildContractPrintHtml === "function"
+      ? buildContractPrintHtml()
+      : (document.getElementById("contractSheet")?.outerHTML || ""));
+    cloned.appendChild(extra);
+
+    const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AK디자인 견적 출력</title>
+<base href="${location.href.replace(/[^/]*$/, "")}">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="contract.css">
+<style>
+  body { margin:0; padding:0; background:#fff; }
+  .wrap, .topbar, .tabs, .summary-strip, .modal-overlay, .screen-only { display:none !important; }
+  #pdfPrintArea, #pdfExtraSheets { display:block !important; }
+  #pdfPrintRoot { display:block !important; }
+  #pdfPrintRoot .pdf-sheet, #pdfPrintRoot .contract-sheet {
+    page-break-after: always;
+    break-after: page;
+  }
+  #pdfPrintRoot .pdf-sheet:last-child, #pdfPrintRoot .contract-sheet:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  #pdfPrintRoot .pdf-sheet, #pdfPrintRoot .contract-sheet {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  #pdfPrintRoot .pdf-memo-content,
+  #pdfPrintRoot .contract-note,
+  #pdfPrintRoot .contract-paragraph,
+  #pdfPrintRoot .contract-info-table td,
+  #pdfPrintRoot .contract-pay-table td,
+  #pdfPrintRoot .contract-sign-table td {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+  #pdfPrintRoot .contract-pay-table input,
+  #pdfPrintRoot .contract-pay-table textarea,
+  #pdfPrintRoot .contract-info-table input,
+  #pdfPrintRoot .contract-info-table textarea { display:none !important; }
+  @media print {
+    @page { size:A4; margin:4mm; }
+    html, body { width:210mm; margin:0 !important; padding:0 !important; background:#fff !important; }
+    #pdfPrintRoot { display:block !important; }
+    #pdfPrintRoot .contract-sheet { font-size:8.4px !important; line-height:1.14 !important; overflow:visible !important; max-height:none !important; page-break-inside:auto !important; break-inside:auto !important; }
+    #pdfPrintRoot .contract-title { font-size:15px !important; margin-bottom:4px !important; }
+    #pdfPrintRoot .contract-subtitle { margin:3px 0 2px !important; }
+    #pdfPrintRoot .contract-info-table th, #pdfPrintRoot .contract-info-table td, #pdfPrintRoot .contract-pay-table th, #pdfPrintRoot .contract-pay-table td, #pdfPrintRoot .contract-sign-table th, #pdfPrintRoot .contract-sign-table td { padding:2px 3px !important; font-size:8.2px !important; }
+    #pdfPrintRoot .contract-paragraph, #pdfPrintRoot .contract-note { font-size:8.2px !important; line-height:1.14 !important; margin-bottom:3px !important; padding:3px 4px !important; }
+  }
+</style>
+</head>
+<body>
+  <div id="pdfPrintRoot">${cloned.outerHTML}</div>
+</body>
+</html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) throw new Error("팝업이 차단되어 인쇄창을 열 수 없습니다.");
+    const finalHtml = html.replace("</body>", `<script>let __printed=false;function runPrint(){if(__printed) return;__printed=true;setTimeout(()=>{try{window.print();}catch(e){}},250);}window.addEventListener('load', runPrint, { once:true });window.addEventListener('afterprint', ()=>{try{window.close();}catch(e){}});<\/script></body>`);
+    w.document.open();
+    w.document.write(finalHtml);
+    w.document.close();
+    w.focus();
   } catch (err) {
     console.error("PDF 인쇄 오류:", err);
     alert("PDF 인쇄용 데이터 채우기 중 오류: " + err.message);
@@ -1617,21 +1758,21 @@ function renderMobileDetailCards() {
         <div class="detail-card-row">
           <input type="number" placeholder="수량"
             value="${row.qty || 0}"
-            onchange="updateDetailRow(${index}, 'qty', this.value)">
+            oninput="updateDetailRow(${index}, 'qty', this.value)">
         </div>
 
         <div class="detail-card-row">
           <input type="number" placeholder="자재비"
             value="${row.cost_material || 0}"
-            onchange="updateDetailRow(${index}, 'cost_material', this.value)">
+            oninput="updateDetailRow(${index}, 'cost_material', this.value)">
           
           <input type="number" placeholder="노무비"
             value="${row.cost_labor || 0}"
-            onchange="updateDetailRow(${index}, 'cost_labor', this.value)">
+            oninput="updateDetailRow(${index}, 'cost_labor', this.value)">
           
           <input type="number" placeholder="경비"
             value="${row.cost_expense || 0}"
-            onchange="updateDetailRow(${index}, 'cost_expense', this.value)">
+            oninput="updateDetailRow(${index}, 'cost_expense', this.value)">
         </div>
 
         <div class="detail-card-amount">
@@ -1655,4 +1796,40 @@ function addDetailRow() {
 function removeDetailRow(index) {
   detailRows.splice(index, 1);
   syncAll();
+}
+
+
+function buildEmptyDetailRow() {
+  return typeof buildEmptyRow === "function" ? buildEmptyRow() : {
+    id: crypto.randomUUID(),
+    work_type_id: "",
+    material_id: "",
+    work_name: "",
+    item_name: "",
+    spec: "",
+    unit: "",
+    qty: 0,
+    cost_material: 0,
+    cost_labor: 0,
+    cost_expense: 0,
+    unit_price: 0,
+    line_amount: 0,
+    note: ""
+  };
+}
+
+function updateDetailRow(index, key, value) {
+  const row = detailRows[index];
+  if (!row) return;
+  if (["qty", "cost_material", "cost_labor", "cost_expense"].includes(key)) {
+    row[key] = toNum(value);
+  } else {
+    row[key] = value;
+  }
+  if (typeof updateComputedAmounts === "function") updateComputedAmounts(row);
+  syncAll();
+}
+
+function renderDetailInputTable() {
+  if (typeof renderDetailRows === "function") renderDetailRows();
 }
