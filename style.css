@@ -1762,14 +1762,68 @@ body.printing-pdf #pdfPrintArea { display:block !important; position:static !imp
 .print-cover{
   min-height:260mm;
   display:flex;
+  flex-direction:column;
   align-items:center;
-  justify-content:center;
+  justify-content:flex-start;
   text-align:center;
+  padding-top:18mm;
 }
 .print-cover-title{
   font-size:34px;
   font-weight:900;
   letter-spacing:-1px;
+}
+.print-cover-title-box{
+  width:188mm;
+  max-width:100%;
+  padding:12mm 12mm 8mm;
+  background:#fff;
+}
+.print-cover-info-card{
+  width:188mm;
+  max-width:100%;
+  margin-top:12mm;
+  padding:7mm 8mm;
+  border:1px solid #d7dce1;
+  border-radius:6px;
+  background:#fff;
+  box-shadow:0 10px 32px rgba(0,0,0,0.04);
+}
+.print-cover-company-card{
+  margin-top:42mm;
+}
+.print-cover-info-head{
+  text-align:left;
+  font-size:12pt;
+  font-weight:800;
+  margin-bottom:2mm;
+  padding-bottom:2mm;
+  border-bottom:1px solid #dcdfe4;
+}
+.print-cover-info-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10mm;
+  padding:2.8mm 1mm;
+  border-bottom:1px solid #eceff3;
+  font-size:11pt;
+}
+.print-cover-info-row:last-child{
+  border-bottom:none;
+}
+.print-cover-info-row span{
+  min-width:26mm;
+  text-align:left;
+  color:#4b5563;
+  font-weight:700;
+}
+.print-cover-info-row strong{
+  flex:1;
+  text-align:right;
+  color:#111827;
+  font-weight:800;
+  word-break:break-word;
 }
 #printArea .print-page-header,
 #printArea .card-header.screen-only,
@@ -1793,4 +1847,47 @@ body.printing-pdf #pdfPrintArea { display:block !important; position:static !imp
 .contract-total-edit-wrap input[readonly]{background:#fff;font-weight:800;}
 @media print{
   .card-header{display:block !important;text-align:left !important;}
+}
+
+
+/* ===== 2026-04-18 estimate input patch ===== */
+#tab-write .form-grid-4 > select.hidden {
+  display: none !important;
+}
+.detail-input-scroll {
+  max-height: 62vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#detailInputTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+#detailInputTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #dde2e7;
+}
+#detailInputTable tbody td {
+  background: #fff;
+}
+#tab-write .card.detail-card {
+  margin-top: 12px;
+}
+@media (max-width: 768px) {
+  .detail-input-scroll {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+
+.write-bottom-info{ margin-top: 14px; }
+@media print{
+  .print-cover-info-card{
+    box-shadow: none !important;
+    border: 1px solid #cfd4da !important;
+  }
 }

@@ -1,7 +1,14 @@
 
     const SUPABASE_URL = "https://rzbqiytumnwvjlmbljbp.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_G7L9_UDamWpmHL6r1pnqLg_7_FLUg4G";
-    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: window.sessionStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
 function showApp() {
   document.getElementById("loginGate").classList.add("hidden");
@@ -29,6 +36,7 @@ async function checkSessionAndStart() {
 
   showApp();
   await initApp();
+  showTab("write");
 }
 
 async function login() {
@@ -52,6 +60,7 @@ async function login() {
 
   showApp();
   await initApp();
+  showTab("write");
 }
 
 async function logout() {
@@ -293,6 +302,16 @@ document.addEventListener("keydown", (e) => {
     }
 
     function removeQuoteRow(id) {
+      const row = detailRows.find(r => r.id === id);
+      if (!row) return;
+
+      const itemName = String(row.item_name || "").trim();
+      const message = itemName
+        ? `품목명 [${itemName}] 행을 삭제하시겠습니까?`
+        : "이 행은 품목명이 없습니다. 이 행을 삭제하시겠습니까?";
+
+      if (!confirm(message)) return;
+
       detailRows = detailRows.filter(r => r.id !== id);
       if (detailRows.length === 0) detailRows.push(buildEmptyRow());
       renderDetailRows();
@@ -311,13 +330,14 @@ document.addEventListener("keydown", (e) => {
 
       updateComputedAmounts(row);
 
-syncAll();
       const amountEl = document.getElementById(`line_amount_${row.id}`);
       if (amountEl) amountEl.textContent = formatWon(row.line_amount);
 
       renderPreviewTables();
       calculateAll();
+      if (typeof refreshCompanySummary === "function") refreshCompanySummary();
     }
+
 
     function handleWorkTypeChange(id, workTypeId) {
       const row = detailRows.find(r => r.id === id);
@@ -387,6 +407,7 @@ syncAll();
 
     function renderDetailRows() {
       const body = document.getElementById("quoteDetailBody");
+      if (!body) return;
       body.innerHTML = "";
 
       detailRows.forEach((row, idx) => {
@@ -400,12 +421,12 @@ syncAll();
               ${makeWorkTypeOptions(row.work_type_id)}
             </select>
           </td>
+          <td><input value="${escapeHtml(row.work_name)}" onchange="updateRowValue('${row.id}','work_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="공종명" /></td>
           <td>
             <select onchange="handleMaterialChange('${row.id}', this.value)">
               ${makeMaterialOptions(row.material_id, row.work_type_id)}
             </select>
           </td>
-          <td><input value="${escapeHtml(row.work_name)}" onchange="updateRowValue('${row.id}','work_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="공종명" /></td>
           <td><input value="${escapeHtml(row.item_name)}" onchange="updateRowValue('${row.id}','item_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="품목명" /></td>
           <td><input value="${escapeHtml(row.spec)}" onchange="updateRowValue('${row.id}','spec',this.value); maybeAutoAppendRow('${row.id}');" placeholder="규격" /></td>
           <td><input type="text" value="${escapeHtml(row.unit)}" onchange="updateRowValue('${row.id}','unit',this.value); maybeAutoAppendRow('${row.id}');" placeholder="단위" /></td>
@@ -415,19 +436,17 @@ syncAll();
           <td><input type="number" value="${row.cost_expense}" oninput="updateRowValue('${row.id}','cost_expense',this.value)" /></td>
           <td class="align-right" style="min-width:140px;"><strong id="line_amount_${row.id}">${formatWon(row.line_amount)}</strong></td>
           <td><textarea onchange="updateRowValue('${row.id}','note',this.value)" placeholder="비고">${escapeHtml(row.note)}</textarea></td>
-<td>
-  <div style="display:flex; gap:3px; flex-direction:column;">
-    
-    <button class="table-btn delete-btn" onclick="removeQuoteRow('${row.id}')">D</button>
-<button class="table-btn" onclick="updateMaterialMasterFromRow('${row.id}')">E</button>
+          <td>
+            <div style="display:flex; gap:3px; flex-direction:column;">
+              <button class="table-btn delete-btn" onclick="removeQuoteRow('${row.id}')">D</button>
+              <button class="table-btn" onclick="updateMaterialMasterFromRow('${row.id}')">E</button>
+            </div>
+          </td>`;
+        body.appendChild(tr);
+      });
 
-  </div>
-</td>    `;
-    body.appendChild(tr);
-  });
-
-  renderPreviewTables();
-}
+      renderPreviewTables();
+    }
 
 function renderPreviewTables() {
   const summaryPreviewBody = document.getElementById("summaryPreviewBody");
@@ -593,20 +612,6 @@ function calculateAll() {
   document.getElementById("total_amount_display").textContent = formatWon(totals.finalTotal);
   document.getElementById("total_amount_display").dataset.value = String(totals.finalTotal);
 
-  const workSummaryList = document.getElementById("workSummaryList");
-  if (workSummaryList) {
-    workSummaryList.innerHTML = "";
-    const keys = Object.keys(workSummary).filter(k => workSummary[k] !== 0);
-    if (keys.length === 0) {
-      workSummaryList.innerHTML = `<div class="work-summary-item"><span>입력된 공종이 없습니다</span><strong>₩ 0</strong></div>`;
-    } else {
-      keys.forEach(key => {
-        const html = `<div class="work-summary-item"><span>${escapeHtml(key)}</span><strong>${formatWon(workSummary[key])}</strong></div>`;
-        workSummaryList.insertAdjacentHTML("beforeend", html);
-      });
-    }
-  }
-
   renderPreviewTables();
 }
 
@@ -716,7 +721,8 @@ function handleCustomerSelectChange() {
 
   document.getElementById("customer_name").value = customer.customer_name || "";
   document.getElementById("customer_phone").value = customer.phone || "";
-  document.getElementById("customer_address").value = customer.address || "";
+  const customerAddressEl = document.getElementById("customer_address");
+  if (customerAddressEl) customerAddressEl.value = customer.address || "";
   syncTopSummary();
 
   const firstSite = sitesCache.find(s => String(s.customer_id ?? "") === String(customer.id));
@@ -742,7 +748,8 @@ function handleSiteSelectChange() {
       document.getElementById("customer_select").value = customer.id;
       document.getElementById("customer_name").value = customer.customer_name || "";
       document.getElementById("customer_phone").value = customer.phone || "";
-      document.getElementById("customer_address").value = customer.address || "";
+      const customerAddressEl = document.getElementById("customer_address");
+  if (customerAddressEl) customerAddressEl.value = customer.address || "";
     }
   }
   syncTopSummary();
@@ -752,7 +759,7 @@ async function saveCustomerMaster() {
   try {
     const customer_name = document.getElementById("customer_name").value.trim();
     const phone = document.getElementById("customer_phone").value.trim();
-    const address = document.getElementById("customer_address").value.trim();
+    const address = document.getElementById("customer_address")?.value.trim() || "";
     if (!customer_name) {
       alert("고객명을 입력하세요.");
       return;
@@ -818,7 +825,7 @@ async function saveSiteMaster() {
 async function upsertCustomer() {
   const customer_name = document.getElementById("customer_name").value.trim();
   const phone = document.getElementById("customer_phone").value.trim();
-  const address = document.getElementById("customer_address").value.trim();
+  const address = document.getElementById("customer_address")?.value.trim() || "";
   if (!customer_name) return null;
 
   const { data: existing, error: findError } = await db.from("customers").select("*").eq("customer_name", customer_name).maybeSingle();
@@ -1167,7 +1174,8 @@ async function selectQuoteFromSearch(quoteId) {
     document.getElementById("quote_date").value = quote.quote_date || "";
     document.getElementById("customer_name").value = quote.customers?.customer_name || "";
     document.getElementById("customer_phone").value = quote.customers?.phone || "";
-    document.getElementById("customer_address").value = quote.customers?.address || "";
+    const customerAddressEl3 = document.getElementById("customer_address");
+    if (customerAddressEl3) customerAddressEl3.value = quote.customers?.address || "";
     document.getElementById("site_name").value = quote.sites?.site_name || "";
     document.getElementById("site_address").value = quote.sites?.site_address || "";
     document.getElementById("area_size").value = quote.sites?.area_size || "";
@@ -1471,7 +1479,8 @@ function resetQuoteForm() {
   document.getElementById("customer_select").value = "";
   document.getElementById("customer_name").value = "";
   document.getElementById("customer_phone").value = "";
-  document.getElementById("customer_address").value = "";
+  const customerAddressEl4 = document.getElementById("customer_address");
+  if (customerAddressEl4) customerAddressEl4.value = "";
   document.getElementById("site_select").value = "";
   document.getElementById("site_name").value = "";
   document.getElementById("site_address").value = "";
@@ -1495,6 +1504,7 @@ document.getElementById("site_manage_cost").value = 0;
   renderDetailRows();
   syncTopSummary();
   calculateAll();
+  showTab("write");
 }
 
 async function initApp() {
@@ -1513,6 +1523,7 @@ async function initApp() {
   renderDetailRows();
   syncTopSummary();
   calculateAll();
+  showTab("write");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1709,7 +1720,18 @@ function addDetailRow() {
 }
 
 function removeDetailRow(index) {
+  const row = detailRows[index];
+  if (!row) return;
+
+  const itemName = String(row.item_name || "").trim();
+  const message = itemName
+    ? `품목명 [${itemName}] 행을 삭제하시겠습니까?`
+    : "이 행은 품목명이 없습니다. 이 행을 삭제하시겠습니까?";
+
+  if (!confirm(message)) return;
+
   detailRows.splice(index, 1);
+  if (detailRows.length === 0) detailRows.push(buildEmptyDetailRow());
   syncAll();
 }
 
@@ -1755,14 +1777,23 @@ function renderDetailInputTable() {
 /* ===== ERP REBUILD APP OVERRIDES ===== */
 function showTab(tabName) {
   const tabs = ["counsel", "write", "summary", "detail", "contract", "company"];
-  tabs.forEach(name => document.getElementById(`tab-${name}`)?.classList.add("hidden"));
+  tabs.forEach(name => {
+    const el = document.getElementById(`tab-${name}`);
+    if (el) el.classList.add("hidden");
+  });
   document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+
   if (tabName === "company") {
     if (typeof requestCompanyAccess === "function") requestCompanyAccess();
     return;
   }
-  document.getElementById(`tab-${tabName}`)?.classList.remove("hidden");
-  document.querySelector(`.tab-btn[data-tab="${tabName}"]`)?.classList.add("active");
+
+  const target = document.getElementById(`tab-${tabName}`);
+  if (target) target.classList.remove("hidden");
+
+  const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+  if (activeBtn) activeBtn.classList.add("active");
+
   if (tabName === "summary" || tabName === "detail") renderPreviewTables();
   if (tabName === "contract" && typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
   if (tabName === "counsel" && typeof syncCounselFromEstimate === "function") {
@@ -1781,9 +1812,61 @@ function stripPrintUnneededTitles(html) {
 }
 
 function buildPrintCoverHtml() {
+  const getValue = (id, fallback = "-") => {
+    const el = document.getElementById(id);
+    if (!el) return fallback;
+    const raw = "value" in el ? el.value : el.textContent;
+    const value = String(raw || "").trim();
+    return value || fallback;
+  };
+
+  const quoteNo = getValue("quote_no");
+  const quoteDate = getValue("quote_date");
+  const customerName = getValue("customer_name");
+  const customerPhone = getValue("customer_phone");
+  const siteName = getValue("site_name");
+  const siteAddress = getValue("site_address");
+  const workType = getValue("work_type");
+
+  const companyRows = [
+    ["상호", getValue("contract_company_name", "AK디자인")],
+    ["사업자번호", getValue("contract_company_bizno", "143-12-01221")],
+    ["대표", getValue("contract_company_ceo", "김민석")],
+    ["전화번호", getValue("contract_company_phone", "010-3677-0454")],
+    ["주소", getValue("contract_company_address", "경기도 광명시 일직로99번안길 7 103호")]
+  ];
+
+  const quoteRows = [
+    ["견적번호", quoteNo],
+    ["작성일", quoteDate],
+    ["고객명", customerName],
+    ["연락처", customerPhone],
+    ["현장명", siteName],
+    ["현장주소", siteAddress],
+    ["공사구분", workType]
+  ];
+
+  const makeRows = (rows) => rows.map(([label, value]) => `
+    <div class="print-cover-info-row">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `).join("");
+
   return `
     <div class="print-cover">
-      <div class="print-cover-title">실내인테리어 표준 견적서</div>
+      <div class="print-cover-title-box">
+        <div class="print-cover-title">AK디자인 견적서</div>
+      </div>
+
+      <div class="print-cover-info-card">
+        ${makeRows(quoteRows)}
+      </div>
+
+      <div class="print-cover-info-card print-cover-company-card">
+        <div class="print-cover-info-head">회사 정보</div>
+        ${makeRows(companyRows)}
+      </div>
     </div>
   `;
 }

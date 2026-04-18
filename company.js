@@ -324,6 +324,7 @@ function addCompanyProfitRow() {
 }
 
 function removeCompanyProfitRow(id) {
+  if (!confirm("삭제하시겠습니까?")) return;
   companyProfitRows = companyProfitRows.filter(row => row.id !== id);
   if (companyProfitRows.length === 0) {
     companyProfitRows.push(buildEmptyCompanyProfitRow());
@@ -392,6 +393,7 @@ function addPaymentRow() {
 }
 
 function removePaymentRow(id) {
+  if (!confirm("삭제하시겠습니까?")) return;
   companyPaymentRows = companyPaymentRows.filter(row => row.id !== id);
   if (companyPaymentRows.length === 0) {
     companyPaymentRows.push(buildEmptyPaymentRow());

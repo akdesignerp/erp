@@ -62,26 +62,20 @@
           <div class="field"><label>차수</label><input id="revision_no" type="number" min="1" value="1" /></div>
           <div class="field"><label>상담일/작성일</label><input id="quote_date" type="date" /></div>
 
-          <div class="field"><label>고객 선택</label><select id="customer_select" onchange="handleCustomerSelectChange()"></select></div>
-          <div class="field inline-actions">
-            <div style="width:100%;">
-              <label>신규 고객명</label>
-              <input id="customer_name" placeholder="고객명 입력" />
-            </div>
-            <button class="btn-light" onclick="saveCustomerMaster()">고객저장</button>
+          <select id="customer_select" class="hidden" onchange="handleCustomerSelectChange()"></select>
+          <div class="field">
+            <label>고객명</label>
+            <input id="customer_name" placeholder="고객명 입력" />
           </div>
           <div class="field"><label>연락처</label><input id="customer_phone" placeholder="연락처 입력" /></div>
-          <div class="field"><label>고객 주소</label><input id="customer_address" placeholder="고객 주소 입력" /></div>
 
-          <div class="field"><label>현장 선택</label><select id="site_select" onchange="handleSiteSelectChange()"></select></div>
-          <div class="field inline-actions">
-            <div style="width:100%;">
-              <label>신규 현장명</label>
-              <input id="site_name" placeholder="현장명 입력" />
-            </div>
-            <button class="btn-light" onclick="saveSiteMaster()">현장저장</button>
+          <select id="site_select" class="hidden" onchange="handleSiteSelectChange()"></select>
+          <div class="field">
+            <label>현장명</label>
+            <input id="site_name" placeholder="현장명 입력" />
           </div>
           <div class="field" style="grid-column: span 2;"><label>현장주소</label><input id="site_address" placeholder="현장 주소 입력" /></div>
+          <div class="field"><label>평수/면적</label><input id="area_size" placeholder="예: 25평" /></div>
 
           <div class="field">
             <label>공사구분</label>
@@ -91,8 +85,7 @@
               <option value="부분공사">부분공사</option>
             </select>
           </div>
-          <div class="field"><label>공사일정</label><input id="work_period" placeholder="예: 2026-04-20 ~ 2026-04-30" /></div>
-          <div class="field"><label>평수/면적</label><input id="area_size" placeholder="예: 25평" /></div>
+          <div class="field"><label>공사시작일</label><input id="work_period" type="date" /></div>
           <div class="field">
             <label>견적상태</label>
             <select id="quote_status">
@@ -123,20 +116,11 @@
       <div class="card">
         <div class="card-header">합계 정보</div>
         <div class="card-body">
-          
-
           <div class="sum-box"><div class="sum-label">직접공사비(상세합)</div><div class="sum-value" id="direct_cost_display">₩ 0</div></div>
           <div class="sum-box"><div class="sum-label">간접비 합계</div><div class="sum-value" id="indirect_cost_display">₩ 0</div></div>
           <div class="sum-box"><div class="sum-label">총공사비</div><div class="sum-value" id="supply_amount_display">₩ 0</div></div>
           <div class="sum-box"><div class="sum-label">VAT</div><div class="sum-value" id="vat_amount_display">₩ 0</div></div>
           <div class="sum-box"><div class="sum-label">실청구액</div><div class="sum-value" id="total_amount_display">₩ 0</div></div>
-
-          <div class="work-summary">
-            <div class="work-summary-title">공종별 요약</div>
-            <div class="work-summary-list" id="workSummaryList">
-              <div class="work-summary-item"><span>입력된 공종이 없습니다</span><strong>₩ 0</strong></div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -145,17 +129,12 @@
   <div class="card detail-card">
     <div class="detail-header">
       <h3>견적 상세 입력</h3>
-      <div class="detail-actions">
-        <button class="btn-light" onclick="addQuoteRow()">행추가</button>
-        <button class="btn-light" onclick="loadWorkTypes()">공종 새로고침</button>
-        <button class="btn-light" onclick="loadMaterials()">품목 새로고침</button>
-      </div>
     </div>
 
-    <div class="table-wrap">
-      <table>
+    <div class="table-wrap detail-input-scroll">
+      <table id="detailInputTable">
         <colgroup>
-          <col style="width: 50px;"><col style="width: 120px;"><col style="width: 140px;"><col style="width: 120px;">
+          <col style="width: 50px;"><col style="width: 120px;"><col style="width: 120px;"><col style="width: 140px;">
           <col style="width: 150px;"><col style="width: 110px;"><col style="width: 70px;"><col style="width: 70px;">
           <col style="width: 90px;"><col style="width: 90px;"><col style="width: 90px;"><col style="width: 160px;">
           <col style="width: 150px;"><col style="width: 90px;">
@@ -164,8 +143,8 @@
           <tr>
             <th>No</th>
             <th>공종선택</th>
-            <th>품목선택</th>
             <th>공종명</th>
+            <th>품목선택</th>
             <th>품목명</th>
             <th>규격</th>
             <th>단위</th>
@@ -182,13 +161,13 @@
       </table>
     </div>
   </div>
-<!-- 모바일 전용 견적상세 입력 -->
-<div id="mobileDetailInput" class="mobile-detail-wrap"></div>
 
-  <div class="bottom-info">
+  <div id="mobileDetailInput" class="mobile-detail-wrap"></div>
+
+  <div class="bottom-info write-bottom-info">
     <div class="info-box"><h4>견적요약 화면</h4><p>공종별 소계 중심으로 고객에게 보여줄 요약 화면 영역입니다.</p></div>
     <div class="info-box"><h4>견적상세 화면</h4><p>품목별 상세 내역을 고객용 또는 내부용으로 나누어 표현할 수 있는 자리입니다.</p></div>
-    <div class="info-box"><h4>회사관리 화면</h4><p>다음 단계에서 고객용 PDF 출력, 공종별 수익, 현장 수익으로 확장합니다.</p></div>
+    <div class="info-box"><h4>회사관리 화면</h4><p>다음 단계에서 고객에게 직접 보여주지 않는 관리 영역입니다.</p></div>
   </div>
 </div>
 
