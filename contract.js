@@ -32,14 +32,27 @@
     const raw = String(q("contract_total_amount_input")?.value || "").replace(/[^\d]/g, "").trim();
     return raw ? toNumSafe(raw) : null;
   }
+  function hasLiveQuoteInput(){
+    try {
+      if (typeof detailRows !== "undefined" && Array.isArray(detailRows) && typeof isMeaningfulRow === "function") {
+        if (detailRows.some(row => isMeaningfulRow(row))) return true;
+      }
+    } catch(e){}
+    const ids = ["extra_cost","waste_cost","insurance_cost","site_manage_cost"];
+    return ids.some(id => toNumSafe(q(id)?.value) > 0);
+  }
   function getEstimatedContractBaseTotal(){
+    const amounts = getCurrentAmountsSafe();
+    const liveTotal = toNumSafe(amounts.totalAmount);
+    if (hasLiveQuoteInput()) {
+      return liveTotal;
+    }
     try {
       if (typeof currentQuoteDbTotalAmount !== "undefined" && toNumSafe(currentQuoteDbTotalAmount) > 0) {
         return toNumSafe(currentQuoteDbTotalAmount);
       }
     } catch(e){}
-    const amounts = getCurrentAmountsSafe();
-    return toNumSafe(amounts.totalAmount);
+    return liveTotal;
   }
   function getContractBaseTotal(){
     return getEstimatedContractBaseTotal();

@@ -292,6 +292,7 @@ document.addEventListener("keydown", (e) => {
       detailRows.push(buildEmptyRow());
       renderDetailRows();
       calculateAll();
+if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
       autoAppendGuard = false;
     }
 
@@ -1084,6 +1085,8 @@ if (typeof savePaymentsFromQuote === "function") {
   await savePaymentsFromQuote();
 }
 
+currentQuoteDbTotalAmount = toNum(amounts.totalAmount);
+if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
 alert("견적 저장 완료");
   } catch (err) {
     console.error(err);
@@ -1459,21 +1462,10 @@ function ensurePdfExtraSheets() {
 
 function printQuote() {
   try {
-    fillPdfData();
-    if (typeof syncContractFromEstimate === "function") syncContractFromEstimate();
-    if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
-    const printArea = document.getElementById("pdfPrintArea");
-    if (!printArea) throw new Error("PDF 출력 영역을 찾을 수 없습니다.");
-    const extra = ensurePdfExtraSheets();
-    if (extra) {
-      extra.innerHTML = buildCounselPrintSheet() + (typeof buildContractPrintHtml === "function" ? buildContractPrintHtml() : (document.getElementById("contractSheet")?.outerHTML || ""));
-    }
-    document.body.classList.add("printing-pdf");
-    window.print();
-    setTimeout(() => document.body.classList.remove("printing-pdf"), 300);
+    openPrintChoiceModal();
   } catch (err) {
-    console.error("PDF 인쇄 오류:", err);
-    alert("PDF 인쇄용 데이터 채우기 중 오류: " + err.message);
+    console.error(err);
+    alert("PDF 출력 선택창 오류: " + err.message);
   }
 }
 
@@ -2020,31 +2012,210 @@ function renderDetailInputTable() {
   if (typeof renderDetailRows === "function") renderDetailRows();
 }
 
-function printQuote() {
+function sanitizeFilePart(value, fallback = "미지정") {
+  const cleaned = String(value || "").trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+  return cleaned || fallback;
+}
+
+function buildPdfFolderInfo() {
+  const quoteDate = document.getElementById("quote_date")?.value || "";
+  const now = new Date();
+  const year = (quoteDate || now.toISOString().slice(0,10)).slice(0,4) || String(now.getFullYear());
+  const siteNameRaw = document.getElementById("site_name")?.value || document.getElementById("site_address")?.value || "현장미지정";
+  const customerNameRaw = document.getElementById("customer_name")?.value || "고객미지정";
+  const siteName = sanitizeFilePart(siteNameRaw, "현장미지정");
+  const customerName = sanitizeFilePart(customerNameRaw, "고객미지정");
+  const siteNameShort = siteName.replace(/\s+/g, "").slice(0, 10) || "현장미지정";
+  const yyyy = String(now.getFullYear());
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mi = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  const timestamp = `${yyyy}${mm}${dd}_${hh}${mi}${ss}`;
+  const folderName = siteNameShort;
+  const fileName = `${customerName}_${timestamp}.pdf`;
+  return { year, folderName, fileName, siteNameShort, customerName, timestamp };
+}
+
+function ensurePrintAreaReady() {
+  renderPreviewTables();
+  if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
+  if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+
+  const area = document.getElementById("printArea");
+  if (!area) throw new Error("printArea를 찾을 수 없습니다.");
+
+  const summary = document.querySelector("#tab-summary .card");
+  const detail = document.querySelector("#tab-detail .card");
+  const contract = document.getElementById("contractSheet");
+
+  area.innerHTML = [
+    buildPrintSection("겉지", buildPrintCoverHtml(), "print-cover-block"),
+    buildPrintSection("견적요약", stripPrintUnneededTitles(summary ? cloneHtmlWithLiveFormValues(summary) : ""), "print-summary-block"),
+    buildPrintSection("견적상세", stripPrintUnneededTitles(detail ? cloneHtmlWithLiveFormValues(detail) : ""), "print-detail-block"),
+    buildPrintSection("상담일지", buildCounselPrintHtml(), "print-counsel-block"),
+    buildPrintSection("계약서", stripPrintUnneededTitles(contract ? cloneHtmlWithLiveFormValues(contract) : ""), "print-contract-block")
+  ].join("");
+  return area;
+}
+
+function openPrintChoiceModal() {
+  const modal = document.getElementById("printChoiceModal");
+  const status = document.getElementById("printChoiceStatus");
+  if (status) {
+    const info = buildPdfFolderInfo();
+    status.textContent = `저장 경로: 기준폴더/${info.year}/${info.folderName}/${info.fileName}`;
+  }
+  modal?.classList.add("show");
+}
+
+function closePrintChoiceModal() {
+  document.getElementById("printChoiceModal")?.classList.remove("show");
+}
+
+async function renderPrintAreaToPdfBlob() {
+  const area = ensurePrintAreaReady();
+  const { jsPDF } = window.jspdf || {};
+  if (!window.html2canvas || !jsPDF) throw new Error("PDF 저장 라이브러리를 불러오지 못했습니다.");
+
+  const previousStyle = area.getAttribute("style") || "";
+  area.style.display = "block";
+  area.style.position = "fixed";
+  area.style.left = "-100000px";
+  area.style.top = "0";
+  area.style.width = "1240px";
+  area.style.background = "#ffffff";
+  area.style.zIndex = "-1";
+
   try {
-    renderPreviewTables();
-    if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
-    if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pages = Array.from(area.querySelectorAll('.print-block'));
+    if (!pages.length) throw new Error("출력 페이지가 없습니다.");
 
-    const area = document.getElementById("printArea");
-    if (!area) throw new Error("printArea를 찾을 수 없습니다.");
+    for (let i = 0; i < pages.length; i++) {
+      const pageEl = pages[i];
+      const rect = pageEl.getBoundingClientRect();
+      if (!rect.width || !rect.height) {
+        throw new Error("출력 페이지 크기를 계산하지 못했습니다.");
+      }
 
-    const summary = document.querySelector("#tab-summary .card");
-    const detail = document.querySelector("#tab-detail .card");
-    const contract = document.getElementById("contractSheet");
+      const canvas = await window.html2canvas(pageEl, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 1240,
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height),
+        scrollX: 0,
+        scrollY: 0
+      });
 
-    area.innerHTML = [
-      buildPrintSection("겉지", buildPrintCoverHtml(), "print-cover-block"),
-      buildPrintSection("견적요약", stripPrintUnneededTitles(summary ? cloneHtmlWithLiveFormValues(summary) : ""), "print-summary-block"),
-      buildPrintSection("견적상세", stripPrintUnneededTitles(detail ? cloneHtmlWithLiveFormValues(detail) : ""), "print-detail-block"),
-      buildPrintSection("상담일지", buildCounselPrintHtml(), "print-counsel-block"),
-      buildPrintSection("계약서", stripPrintUnneededTitles(contract ? cloneHtmlWithLiveFormValues(contract) : ""), "print-contract-block")
-    ].join("");
+      if (!canvas.width || !canvas.height) {
+        throw new Error("PDF 캔버스 생성에 실패했습니다.");
+      }
 
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      if (!Number.isFinite(imgHeight) || imgHeight <= 0) {
+        throw new Error("PDF 페이지 높이 계산에 실패했습니다.");
+      }
+      if (i > 0) pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
+    }
+    return pdf.output('blob');
+  } finally {
+    area.setAttribute("style", previousStyle);
+    if (!previousStyle) area.removeAttribute("style");
+  }
+}
+
+function downloadPdfBlobFallback(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+async function savePdfWithAutoFolders() {
+  const info = buildPdfFolderInfo();
+  const blob = await renderPrintAreaToPdfBlob();
+
+  if (!('showDirectoryPicker' in window) || !window.isSecureContext) {
+    downloadPdfBlobFallback(blob, info.fileName);
+    return { mode: 'download', path: info.fileName, reason: 'unsupported' };
+  }
+
+  try {
+    let root = window.__akPdfRootDirHandle || null;
+    if (!root) {
+      root = await window.showDirectoryPicker({ mode: 'readwrite' });
+      window.__akPdfRootDirHandle = root;
+    }
+
+    if (root.queryPermission) {
+      let perm = await root.queryPermission({ mode: 'readwrite' });
+      if (perm !== 'granted' && root.requestPermission) {
+        perm = await root.requestPermission({ mode: 'readwrite' });
+      }
+      if (perm !== 'granted') {
+        throw new Error('폴더 쓰기 권한이 허용되지 않았습니다.');
+      }
+    }
+
+    const yearDir = await root.getDirectoryHandle(info.year, { create: true });
+    const targetDir = await yearDir.getDirectoryHandle(info.folderName, { create: true });
+    const fileHandle = await targetDir.getFileHandle(info.fileName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return { mode: 'folder', path: `${info.year}/${info.folderName}/${info.fileName}` };
+  } catch (err) {
+    console.warn('자동 폴더 저장 실패, 다운로드로 전환:', err);
+    downloadPdfBlobFallback(blob, info.fileName);
+    return { mode: 'download', path: info.fileName, reason: err?.message || 'save_failed' };
+  }
+}
+
+async function handlePrintChoice(mode) {
+  const modal = document.getElementById('printChoiceModal');
+  const status = document.getElementById('printChoiceStatus');
+  try {
+    modal?.classList.add('print-saving');
+    if (mode === 'save') {
+      if (status) status.textContent = 'PDF 저장 중입니다...';
+      const result = await savePdfWithAutoFolders();
+      if (status) status.textContent = result.mode === 'folder' ? `저장 완료: ${result.path}` : `브라우저 다운로드로 저장 완료: ${result.path}`;
+      setTimeout(() => closePrintChoiceModal(), 700);
+      return;
+    }
+    if (status) status.textContent = '인쇄 화면을 여는 중입니다...';
+    ensurePrintAreaReady();
+    closePrintChoiceModal();
     window.print();
   } catch (err) {
     console.error(err);
-    alert("PDF 인쇄 실패: " + err.message);
+    if (status) status.textContent = 'PDF 처리 실패: ' + err.message;
+    else alert('PDF 처리 실패: ' + err.message);
+  } finally {
+    modal?.classList.remove('print-saving');
+  }
+}
+
+function printQuote() {
+  try {
+    openPrintChoiceModal();
+  } catch (err) {
+    console.error(err);
+    alert("PDF 출력 선택창 오류: " + err.message);
   }
 }
 

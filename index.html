@@ -583,6 +583,24 @@
 
   </div>  <div id="printArea" class="print-area"></div>
 
+
+<div id="printChoiceModal" class="modal-overlay">
+  <div class="modal-card print-choice-card">
+    <div class="modal-header">
+      <div class="modal-title">PDF 출력 방식 선택</div>
+      <button class="btn-light" type="button" onclick="closePrintChoiceModal()">닫기</button>
+    </div>
+    <div class="modal-body">
+      <div class="print-choice-text">PDF로 저장할까요, 바로 인쇄할까요?</div>
+      <div class="inline-actions print-choice-actions">
+        <button class="btn-primary" type="button" onclick="handlePrintChoice('save')">저장하기</button>
+        <button class="btn-light" type="button" onclick="handlePrintChoice('print')">인쇄하기</button>
+      </div>
+      <div id="printChoiceStatus" class="status-box" style="margin-top:10px;">저장은 지원 브라우저에서 폴더 자동 생성 후 PDF로 저장하고, 인쇄는 현재 프린터로 바로 진행합니다.</div>
+    </div>
+  </div>
+</div>
+
 <div id="companyAuthModal" class="modal-overlay">
   <div class="modal-card company-auth-card">
     <div class="modal-header">
@@ -610,6 +628,8 @@
   </div>
 </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="app.js"></script>
 <script src="contract.js"></script>
   <script src="company.js"></script>

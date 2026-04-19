@@ -2231,3 +2231,11 @@ body.printing-pdf #pdfPrintArea { display:block !important; position:static !imp
     white-space: pre-wrap !important;
   }
 }
+
+
+/* ===== 2026-04-19 print choice + pdf save ===== */
+.print-choice-card{max-width:520px;}
+.print-choice-text{font-size:18px;font-weight:800;color:#1f2937;margin-bottom:14px;text-align:center;}
+.print-choice-actions{justify-content:center;gap:10px;}
+.print-choice-actions button{min-width:140px;}
+.print-saving{opacity:.72;pointer-events:none;}
