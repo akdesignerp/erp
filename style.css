@@ -2241,13 +2241,47 @@ body.printing-pdf #pdfPrintArea { display:block !important; position:static !imp
 .print-saving{opacity:.72;pointer-events:none;}
 
 
-/* ===== baseline rebuild structure helpers ===== */
-.detail-mobile-card{background:#fff;border:1px solid #d7dde7;border-radius:14px;padding:12px;margin-bottom:12px;}
-.detail-mobile-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;}
-.detail-mobile-no{font-size:14px;font-weight:800;}
-.detail-mobile-amount{font-size:15px;font-weight:800;white-space:nowrap;}
-.detail-mobile-grid{display:grid;gap:8px;margin-bottom:8px;}
-.detail-mobile-grid-2{grid-template-columns:1fr 1fr;}
-.detail-mobile-grid-compact{grid-template-columns:repeat(2,1fr);}
-.detail-mobile-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;}
-@media (max-width: 768px){.detail-mobile-grid-2,.detail-mobile-grid-compact{grid-template-columns:1fr 1fr;}}
+/* structured printArea PDF capture */
+
+body.capturing-print-area {
+  background: #ffffff !important;
+}
+body.capturing-print-area .wrap,
+body.capturing-print-area .modal-overlay,
+body.capturing-print-area .login-gate {
+  display: none !important;
+}
+body.capturing-print-area #printArea {
+  display: block !important;
+  position: static !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #fff !important;
+}
+body.capturing-print-area #printArea .screen-only,
+body.capturing-print-area #printArea button,
+body.capturing-print-area #printArea .btn-light,
+body.capturing-print-area #printArea .btn-primary,
+body.capturing-print-area #printArea .btn-dark {
+  display: none !important;
+}
+body.capturing-print-area #printArea .card,
+body.capturing-print-area #printArea .contract-card,
+body.capturing-print-area #printArea .contract-subcard {
+  box-shadow: none !important;
+  background: #fff !important;
+}
+
+
+/* 2026-04-19 contract table width fix + direct print */
+.contract-info-table-wide{width:100% !important; table-layout:fixed !important; display:table !important; white-space:normal !important;}
+.contract-info-table-wide col:first-child{width:160px !important;}
+.contract-info-table-wide col:last-child{width:auto !important;}
+.contract-info-table-wide th{width:160px !important;}
+.contract-info-table-wide td{width:auto !important;}
+#tab-contract .contract-info-table-wide, #printArea .contract-info-table-wide{width:100% !important; display:table !important; white-space:normal !important;}
+#tab-contract .contract-info-table-wide tbody, #printArea .contract-info-table-wide tbody{display:table-row-group !important; width:100% !important;}
+#tab-contract .contract-info-table-wide tr, #printArea .contract-info-table-wide tr{display:table-row !important; width:100% !important;}
+#tab-contract .contract-info-table-wide th, #tab-contract .contract-info-table-wide td, #printArea .contract-info-table-wide th, #printArea .contract-info-table-wide td{display:table-cell !important; white-space:normal !important; word-break:break-word !important;}
+#tab-contract .contract-card-emphasis .contract-subcard:first-child, #printArea .contract-card-emphasis .contract-subcard:first-child{width:100% !important; max-width:none !important;}
