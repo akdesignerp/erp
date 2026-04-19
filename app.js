@@ -306,11 +306,17 @@ document.addEventListener("keydown", (e) => {
       if (!row) return;
 
       const itemName = String(row.item_name || "").trim();
-      const message = itemName
-        ? `품목명 [${itemName}] 행을 삭제하시겠습니까?`
-        : "이 행은 품목명이 없습니다. 이 행을 삭제하시겠습니까?";
-
-      if (!confirm(message)) return;
+      if (itemName) {
+        const typed = prompt(`삭제하려면 품목명 [${itemName}] 을(를) 입력하세요.`, "");
+        if (typed === null) return;
+        if (String(typed).trim() !== itemName) {
+          alert("품목명이 일치하지 않아 삭제하지 않았습니다.");
+          return;
+        }
+      } else {
+        const ok = confirm("이 행은 품목명이 없습니다. 이 행을 삭제하시겠습니까?");
+        if (!ok) return;
+      }
 
       detailRows = detailRows.filter(r => r.id !== id);
       if (detailRows.length === 0) detailRows.push(buildEmptyRow());
@@ -1720,18 +1726,7 @@ function addDetailRow() {
 }
 
 function removeDetailRow(index) {
-  const row = detailRows[index];
-  if (!row) return;
-
-  const itemName = String(row.item_name || "").trim();
-  const message = itemName
-    ? `품목명 [${itemName}] 행을 삭제하시겠습니까?`
-    : "이 행은 품목명이 없습니다. 이 행을 삭제하시겠습니까?";
-
-  if (!confirm(message)) return;
-
   detailRows.splice(index, 1);
-  if (detailRows.length === 0) detailRows.push(buildEmptyDetailRow());
   syncAll();
 }
 
@@ -1774,6 +1769,7 @@ function renderDetailInputTable() {
 
 
 
+
 /* ===== ERP REBUILD APP OVERRIDES ===== */
 function showTab(tabName) {
   const tabs = ["counsel", "write", "summary", "detail", "contract", "company"];
@@ -1802,41 +1798,33 @@ function showTab(tabName) {
   }
 }
 
-
 function buildPrintSection(title, innerHtml, extraClass = "") {
-  return `<section class="print-block ${extraClass}"><div class="print-page">${innerHtml}</div></section>`;
+  return `<section class="print-block ${extraClass}"><div class="print-page"><div class="print-delete-title">${title}</div>${innerHtml}</div></section>`;
 }
 
 function stripPrintUnneededTitles(html) {
-  return String(html || "");
+  return String(html || "")
+    .replace(/<button[^>]*>[\s\S]*?<\/button>/gi, function(match) {
+      return /screen-only/.test(match) ? "" : match;
+    });
 }
 
 function buildPrintCoverHtml() {
-  const getValue = (id, fallback = "-") => {
-    const el = document.getElementById(id);
-    if (!el) return fallback;
-    const raw = "value" in el ? el.value : el.textContent;
-    const value = String(raw || "").trim();
-    return value || fallback;
-  };
+  const quoteNo = document.getElementById("quote_no")?.value || "-";
+  const quoteDate = document.getElementById("quote_date")?.value || "-";
+  const customerName = document.getElementById("customer_name")?.value || "-";
+  const customerPhone = document.getElementById("customer_phone")?.value || "-";
+  const siteName = document.getElementById("site_name")?.value || "-";
+  const siteAddress = document.getElementById("site_address")?.value || "-";
+  const workType = document.getElementById("work_type")?.value || "본공사";
 
-  const quoteNo = getValue("quote_no");
-  const quoteDate = getValue("quote_date");
-  const customerName = getValue("customer_name");
-  const customerPhone = getValue("customer_phone");
-  const siteName = getValue("site_name");
-  const siteAddress = getValue("site_address");
-  const workType = getValue("work_type");
+  const companyName = document.getElementById("contract_company_name")?.textContent?.trim() || "AK디자인";
+  const companyBiz = document.getElementById("contract_company_bizno")?.textContent?.trim() || "143-12-01221";
+  const companyCeo = document.getElementById("contract_company_ceo")?.textContent?.trim() || "김민석";
+  const companyPhone = document.getElementById("contract_company_phone")?.textContent?.trim() || "010-3677-0454";
+  const companyAddress = document.getElementById("contract_company_address")?.textContent?.trim() || "경기도 광명시 일직로99번안길 7 103호 AK디자인";
 
-  const companyRows = [
-    ["상호", getValue("contract_company_name", "AK디자인")],
-    ["사업자번호", getValue("contract_company_bizno", "143-12-01221")],
-    ["대표", getValue("contract_company_ceo", "김민석")],
-    ["전화번호", getValue("contract_company_phone", "010-3677-0454")],
-    ["주소", getValue("contract_company_address", "경기도 광명시 일직로99번안길 7 103호")]
-  ];
-
-  const quoteRows = [
+  const infoRows = [
     ["견적번호", quoteNo],
     ["작성일", quoteDate],
     ["고객명", customerName],
@@ -1846,44 +1834,50 @@ function buildPrintCoverHtml() {
     ["공사구분", workType]
   ];
 
-  const makeRows = (rows) => rows.map(([label, value]) => `
+  const companyRows = [
+    ["상호", companyName],
+    ["사업자번호", companyBiz],
+    ["대표", companyCeo],
+    ["전화번호", companyPhone],
+    ["주소", companyAddress]
+  ];
+
+  const renderRows = (rows) => rows.map(([label, value]) => `
     <div class="print-cover-info-row">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(value)}</strong>
+      <div class="print-cover-info-label">${escapeHtml(label)}</div>
+      <div class="print-cover-info-value">${escapeHtml(value || "-")}</div>
     </div>
   `).join("");
 
   return `
-    <div class="print-cover">
-      <div class="print-cover-title-box">
-        <div class="print-cover-title">AK디자인 견적서</div>
-      </div>
-
-      <div class="print-cover-info-card">
-        ${makeRows(quoteRows)}
-      </div>
-
-      <div class="print-cover-info-card print-cover-company-card">
-        <div class="print-cover-info-head">회사 정보</div>
-        ${makeRows(companyRows)}
+    <div class="print-cover-sheet">
+      <div class="print-cover-title-main">AK디자인 견적서</div>
+      <div class="print-cover-stack">
+        <section class="print-cover-box print-cover-primary">
+          ${renderRows(infoRows)}
+        </section>
+        <section class="print-cover-box print-cover-company-box2">
+          <div class="print-cover-company-header">회사 정보</div>
+          ${renderRows(companyRows)}
+        </section>
       </div>
     </div>
   `;
 }
 
 function buildCounselPrintHtml() {
-  const get = (id) => document.getElementById(id)?.value || "";
+  const get = (id, fallback = "") => document.getElementById(id)?.value || fallback;
   return `
-    <div class="card">
+    <div class="card print-card-shell">
       <div class="card-header">상담일지</div>
       <div class="card-body">
-        <div class="form-grid-4">
-          <div class="field"><label>상담일자</label><input value="${escapeHtml(get("counsel_date"))}" readonly></div>
-          <div class="field"><label>성함</label><input value="${escapeHtml(get("counsel_name"))}" readonly></div>
-          <div class="field"><label>전화번호</label><input value="${escapeHtml(get("counsel_phone"))}" readonly></div>
-          <div class="field"><label>현장명</label><input value="${escapeHtml(get("counsel_site_name"))}" readonly></div>
-          <div class="field" style="grid-column: span 4;"><label>현장주소</label><input value="${escapeHtml(get("counsel_site_address"))}" readonly></div>
-          <div class="field memo-box" style="grid-column: span 4;"><label>상담내용</label><textarea readonly>${escapeHtml(get("counsel_memo"))}</textarea></div>
+        <div class="form-grid-4 print-form-grid-4">
+          <div class="field"><label>상담일자</label><input value="${escapeHtml(get("counsel_date", get("quote_date")))}" readonly></div>
+          <div class="field"><label>성함</label><input value="${escapeHtml(get("counsel_name", get("customer_name")))}" readonly></div>
+          <div class="field"><label>전화번호</label><input value="${escapeHtml(get("counsel_phone", get("customer_phone")))}" readonly></div>
+          <div class="field"><label>현장명</label><input value="${escapeHtml(get("counsel_site_name", get("site_name")))}" readonly></div>
+          <div class="field" style="grid-column: span 4;"><label>현장주소</label><input value="${escapeHtml(get("counsel_site_address", get("site_address")))}" readonly></div>
+          <div class="field memo-box" style="grid-column: span 4;"><label>상담내용</label><textarea readonly>${escapeHtml(get("counsel_memo") || "-")}</textarea></div>
         </div>
       </div>
     </div>
@@ -1928,24 +1922,125 @@ function cloneHtmlWithLiveFormValues(sourceEl) {
   return clone.outerHTML;
 }
 
+function renderMobileDetailCards() {
+  const wrap = document.getElementById("mobileDetailInput");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  detailRows.forEach((row, index) => {
+    updateComputedAmounts(row);
+
+    wrap.insertAdjacentHTML("beforeend", `
+      <div class="detail-mobile-card">
+        <div class="detail-mobile-head">
+          <div class="detail-mobile-no">상세 ${index + 1}</div>
+          <div class="detail-mobile-amount">${formatWon(row.line_amount)}</div>
+        </div>
+
+        <div class="detail-mobile-grid detail-mobile-grid-2">
+          <div class="field">
+            <label>공종선택</label>
+            <select onchange="handleWorkTypeChange('${row.id}', this.value)">
+              ${makeWorkTypeOptions(row.work_type_id)}
+            </select>
+          </div>
+          <div class="field">
+            <label>공종명</label>
+            <input value="${escapeHtml(row.work_name || "")}" onchange="updateRowValue('${row.id}','work_name',this.value); renderMobileDetailCards(); maybeAutoAppendRow('${row.id}');" placeholder="공종명" />
+          </div>
+        </div>
+
+        <div class="detail-mobile-grid detail-mobile-grid-2">
+          <div class="field">
+            <label>품목선택</label>
+            <select onchange="handleMaterialChange('${row.id}', this.value); renderMobileDetailCards();">
+              ${makeMaterialOptions(row.material_id, row.work_type_id)}
+            </select>
+          </div>
+          <div class="field">
+            <label>품목명</label>
+            <input value="${escapeHtml(row.item_name || "")}" onchange="updateRowValue('${row.id}','item_name',this.value); renderMobileDetailCards(); maybeAutoAppendRow('${row.id}');" placeholder="품목명" />
+          </div>
+        </div>
+
+        <div class="detail-mobile-grid detail-mobile-grid-2">
+          <div class="field">
+            <label>규격</label>
+            <input value="${escapeHtml(row.spec || "")}" onchange="updateRowValue('${row.id}','spec',this.value); renderMobileDetailCards(); maybeAutoAppendRow('${row.id}');" placeholder="규격" />
+          </div>
+          <div class="field">
+            <label>단위</label>
+            <input value="${escapeHtml(row.unit || "")}" onchange="updateRowValue('${row.id}','unit',this.value); renderMobileDetailCards(); maybeAutoAppendRow('${row.id}');" placeholder="단위" />
+          </div>
+        </div>
+
+        <div class="detail-mobile-grid detail-mobile-grid-2 detail-mobile-grid-compact">
+          <div class="field">
+            <label>수량</label>
+            <input type="number" value="${row.qty || 0}" oninput="updateRowValue('${row.id}','qty',this.value); renderMobileDetailCards();" />
+          </div>
+          <div class="field">
+            <label>자재비</label>
+            <input type="number" value="${row.cost_material || 0}" oninput="updateRowValue('${row.id}','cost_material',this.value); renderMobileDetailCards();" />
+          </div>
+          <div class="field">
+            <label>노무비</label>
+            <input type="number" value="${row.cost_labor || 0}" oninput="updateRowValue('${row.id}','cost_labor',this.value); renderMobileDetailCards();" />
+          </div>
+          <div class="field">
+            <label>경비</label>
+            <input type="number" value="${row.cost_expense || 0}" oninput="updateRowValue('${row.id}','cost_expense',this.value); renderMobileDetailCards();" />
+          </div>
+        </div>
+
+        <div class="field detail-mobile-note">
+          <label>비고</label>
+          <textarea onchange="updateRowValue('${row.id}','note',this.value); renderMobileDetailCards();" placeholder="비고">${escapeHtml(row.note || "")}</textarea>
+        </div>
+
+        <div class="detail-mobile-actions">
+          <button type="button" class="table-btn" onclick="updateMaterialMasterFromRow('${row.id}')">단가수정</button>
+          <button type="button" class="table-btn delete-btn" onclick="removeQuoteRow('${row.id}'); renderMobileDetailCards();">삭제</button>
+        </div>
+      </div>
+    `);
+  });
+}
+
+function syncAll() {
+  renderDetailInputTable();
+  renderMobileDetailCards();
+  renderPreviewTables();
+  calculateAll();
+  if (typeof refreshCompanySummary === "function") refreshCompanySummary();
+}
+
+function renderDetailInputTable() {
+  if (typeof renderDetailRows === "function") renderDetailRows();
+}
 
 function printQuote() {
   try {
     renderPreviewTables();
     if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
     if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+
     const area = document.getElementById("printArea");
     if (!area) throw new Error("printArea를 찾을 수 없습니다.");
+
     const summary = document.querySelector("#tab-summary .card");
     const detail = document.querySelector("#tab-detail .card");
     const contract = document.getElementById("contractSheet");
+
     area.innerHTML = [
       buildPrintSection("겉지", buildPrintCoverHtml(), "print-cover-block"),
-      buildPrintSection("견적요약", stripPrintUnneededTitles(summary ? cloneHtmlWithLiveFormValues(summary) : "")),
-      buildPrintSection("견적상세", stripPrintUnneededTitles(detail ? cloneHtmlWithLiveFormValues(detail) : "")),
-      buildPrintSection("상담일지", buildCounselPrintHtml()),
-      buildPrintSection("계약서", stripPrintUnneededTitles(contract ? cloneHtmlWithLiveFormValues(contract) : ""))
+      buildPrintSection("견적요약", stripPrintUnneededTitles(summary ? cloneHtmlWithLiveFormValues(summary) : ""), "print-summary-block"),
+      buildPrintSection("견적상세", stripPrintUnneededTitles(detail ? cloneHtmlWithLiveFormValues(detail) : ""), "print-detail-block"),
+      buildPrintSection("상담일지", buildCounselPrintHtml(), "print-counsel-block"),
+      buildPrintSection("계약서", stripPrintUnneededTitles(contract ? cloneHtmlWithLiveFormValues(contract) : ""), "print-contract-block")
     ].join("");
+
     window.print();
   } catch (err) {
     console.error(err);
@@ -1956,7 +2051,7 @@ function printQuote() {
 const __originalSelectQuoteFromSearch = selectQuoteFromSearch;
 selectQuoteFromSearch = async function(quoteId) {
   await __originalSelectQuoteFromSearch(quoteId);
-  calculateAll();
+  syncAll();
   if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
   if (typeof loadCounselLogList === "function") await loadCounselLogList();
   if (typeof loadContractByQuoteNo === "function") await loadContractByQuoteNo(document.getElementById("quote_no")?.value || "");
@@ -1977,6 +2072,7 @@ resetQuoteForm = function() {
   if (typeof syncCounselFromEstimate === "function") syncCounselFromEstimate(false);
   if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
   if (typeof loadCounselLogList === "function") loadCounselLogList();
+  syncAll();
 };
 
 const __originalInitApp = initApp;
@@ -1987,4 +2083,5 @@ initApp = async function() {
   if (typeof loadCounselLogList === "function") await loadCounselLogList();
   if (typeof loadContractByQuoteNo === "function") await loadContractByQuoteNo(document.getElementById("quote_no")?.value || "");
   if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+  syncAll();
 };
