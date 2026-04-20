@@ -346,6 +346,10 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
     }
 
 
+    function isMobileDetailMode() {
+      return window.innerWidth <= 768;
+    }
+
     function handleWorkTypeChange(id, workTypeId) {
       const row = detailRows.find(r => r.id === id);
       if (!row) return;
@@ -354,9 +358,13 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       const wt = workTypesCache.find(x => String(x.id) === String(workTypeId));
       row.work_name = wt ? wt.work_name : row.work_name;
 
-      renderDetailRows();
+      updateComputedAmounts(row);
       calculateAll();
       maybeAutoAppendRow(id);
+
+      if (!isMobileDetailMode()) {
+        renderDetailRows();
+      }
     }
 
     function handleMaterialChange(id, materialId) {
@@ -367,9 +375,13 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       const material = materialsCache.find(x => String(x.id) === String(materialId));
 
       if (!material) {
-        renderDetailRows();
+        updateComputedAmounts(row);
         calculateAll();
         maybeAutoAppendRow(id);
+
+        if (!isMobileDetailMode()) {
+          renderDetailRows();
+        }
         return;
       }
 
@@ -387,9 +399,12 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       }
 
       updateComputedAmounts(row);
-      renderDetailRows();
       calculateAll();
       maybeAutoAppendRow(id);
+
+      if (!isMobileDetailMode()) {
+        renderDetailRows();
+      }
     }
 
     function makeWorkTypeOptions(selectedId) {
@@ -1940,56 +1955,56 @@ function renderMobileDetailCards() {
           </div>
           <div class="field">
             <label>공종명</label>
-            <input value="${escapeHtml(row.work_name || "")}" onchange="updateRowValue('${row.id}','work_name',this.value); renderMobileDetailCards(); maybeAutoAppendRow('${row.id}');" placeholder="공종명" />
+            <input value="${escapeHtml(row.work_name || "")}" onchange="updateRowValue('${row.id}','work_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="공종명" />
           </div>
         </div>
 
         <div class="detail-mobile-grid detail-mobile-grid-2">
           <div class="field">
             <label>품목선택</label>
-            <select onchange="handleMaterialChange('${row.id}', this.value); renderMobileDetailCards();">
+            <select onchange="handleMaterialChange('${row.id}', this.value)">
               ${makeMaterialOptions(row.material_id, row.work_type_id)}
             </select>
           </div>
           <div class="field">
             <label>품목명</label>
-            <input value="${escapeHtml(row.item_name || "")}" onchange="updateRowValue('${row.id}','item_name',this.value); renderMobileDetailCards(); maybeAutoAppendRow('${row.id}');" placeholder="품목명" />
+            <input value="${escapeHtml(row.item_name || "")}" onchange="updateRowValue('${row.id}','item_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="품목명" />
           </div>
         </div>
 
         <div class="detail-mobile-grid detail-mobile-grid-2">
           <div class="field">
             <label>규격</label>
-            <input value="${escapeHtml(row.spec || "")}" onchange="updateRowValue('${row.id}','spec',this.value); renderMobileDetailCards(); maybeAutoAppendRow('${row.id}');" placeholder="규격" />
+            <input value="${escapeHtml(row.spec || "")}" onchange="updateRowValue('${row.id}','spec',this.value); maybeAutoAppendRow('${row.id}');" placeholder="규격" />
           </div>
           <div class="field">
             <label>단위</label>
-            <input value="${escapeHtml(row.unit || "")}" onchange="updateRowValue('${row.id}','unit',this.value); renderMobileDetailCards(); maybeAutoAppendRow('${row.id}');" placeholder="단위" />
+            <input value="${escapeHtml(row.unit || "")}" onchange="updateRowValue('${row.id}','unit',this.value); maybeAutoAppendRow('${row.id}');" placeholder="단위" />
           </div>
         </div>
 
         <div class="detail-mobile-grid detail-mobile-grid-2 detail-mobile-grid-compact">
           <div class="field">
             <label>수량</label>
-            <input type="number" value="${row.qty || 0}" oninput="updateRowValue('${row.id}','qty',this.value); renderMobileDetailCards();" />
+            <input type="number" value="${row.qty || 0}" oninput="updateRowValue('${row.id}','qty',this.value);" />
           </div>
           <div class="field">
             <label>자재비</label>
-            <input type="number" value="${row.cost_material || 0}" oninput="updateRowValue('${row.id}','cost_material',this.value); renderMobileDetailCards();" />
+            <input type="number" value="${row.cost_material || 0}" oninput="updateRowValue('${row.id}','cost_material',this.value);" />
           </div>
           <div class="field">
             <label>노무비</label>
-            <input type="number" value="${row.cost_labor || 0}" oninput="updateRowValue('${row.id}','cost_labor',this.value); renderMobileDetailCards();" />
+            <input type="number" value="${row.cost_labor || 0}" oninput="updateRowValue('${row.id}','cost_labor',this.value);" />
           </div>
           <div class="field">
             <label>경비</label>
-            <input type="number" value="${row.cost_expense || 0}" oninput="updateRowValue('${row.id}','cost_expense',this.value); renderMobileDetailCards();" />
+            <input type="number" value="${row.cost_expense || 0}" oninput="updateRowValue('${row.id}','cost_expense',this.value);" />
           </div>
         </div>
 
         <div class="field detail-mobile-note">
           <label>비고</label>
-          <textarea onchange="updateRowValue('${row.id}','note',this.value); renderMobileDetailCards();" placeholder="비고">${escapeHtml(row.note || "")}</textarea>
+          <textarea onchange="updateRowValue('${row.id}','note',this.value);" placeholder="비고">${escapeHtml(row.note || "")}</textarea>
         </div>
 
         <div class="detail-mobile-actions">
