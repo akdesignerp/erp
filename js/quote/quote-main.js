@@ -358,11 +358,26 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       const wt = workTypesCache.find(x => String(x.id) === String(workTypeId));
       row.work_name = wt ? wt.work_name : row.work_name;
 
+      if (row.material_id) {
+        const selectedMaterial = materialsCache.find(x => String(x.id) === String(row.material_id));
+        if (!selectedMaterial || String(selectedMaterial.work_type_id ?? "") !== String(workTypeId ?? "")) {
+          row.material_id = "";
+          row.item_name = "";
+          row.spec = "";
+          row.unit = "";
+          row.cost_material = 0;
+          row.cost_labor = 0;
+          row.cost_expense = 0;
+        }
+      }
+
       updateComputedAmounts(row);
       calculateAll();
       maybeAutoAppendRow(id);
 
-      if (!isMobileDetailMode()) {
+      if (isMobileDetailMode()) {
+        renderMobileDetailCards();
+      } else {
         renderDetailRows();
       }
     }
@@ -375,11 +390,19 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       const material = materialsCache.find(x => String(x.id) === String(materialId));
 
       if (!material) {
+        row.item_name = "";
+        row.spec = "";
+        row.unit = "";
+        row.cost_material = 0;
+        row.cost_labor = 0;
+        row.cost_expense = 0;
         updateComputedAmounts(row);
         calculateAll();
         maybeAutoAppendRow(id);
 
-        if (!isMobileDetailMode()) {
+        if (isMobileDetailMode()) {
+          renderMobileDetailCards();
+        } else {
           renderDetailRows();
         }
         return;
@@ -402,7 +425,9 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       calculateAll();
       maybeAutoAppendRow(id);
 
-      if (!isMobileDetailMode()) {
+      if (isMobileDetailMode()) {
+        renderMobileDetailCards();
+      } else {
         renderDetailRows();
       }
     }
