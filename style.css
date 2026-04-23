@@ -2285,3 +2285,156 @@ body.capturing-print-area #printArea .contract-subcard {
 #tab-contract .contract-info-table-wide tr, #printArea .contract-info-table-wide tr{display:table-row !important; width:100% !important;}
 #tab-contract .contract-info-table-wide th, #tab-contract .contract-info-table-wide td, #printArea .contract-info-table-wide th, #printArea .contract-info-table-wide td{display:table-cell !important; white-space:normal !important; word-break:break-word !important;}
 #tab-contract .contract-card-emphasis .contract-subcard:first-child, #printArea .contract-card-emphasis .contract-subcard:first-child{width:100% !important; max-width:none !important;}
+
+/* ===== 2026-04-23 견적상세 폭 조정 + 글씨 확대 ===== */
+
+body {
+  font-size: 18px;
+}
+
+button {
+  font-size: 18px;
+}
+
+input,
+select,
+textarea {
+  font-size: 18px;
+}
+
+thead th {
+  font-size: 17px;
+}
+
+tbody td {
+  font-size: 17px;
+}
+
+tbody td input,
+tbody td select,
+tbody td textarea {
+  font-size: 17px;
+}
+
+.field label,
+.mini-card .label,
+.sum-box .sum-label,
+.work-summary-title,
+.work-summary-item,
+.title-area p,
+.info-box p {
+  font-size: 16px;
+}
+
+.mini-card .value {
+  font-size: 22px;
+}
+
+.card-header {
+  font-size: 26px;
+}
+
+.detail-header h3 {
+  font-size: 30px;
+}
+
+.sum-box .sum-value {
+  font-size: 26px;
+}
+
+/* 견적상세 입력 테이블 */
+#detailInputTable {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* 품목명 = 비고 폭 동일 */
+#detailInputTable th:nth-child(3),
+#detailInputTable td:nth-child(3),
+#detailInputTable th:nth-child(10),
+#detailInputTable td:nth-child(10) {
+  width: 16%;
+  max-width: 16%;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* 공종명은 조금 줄임 */
+#detailInputTable th:nth-child(2),
+#detailInputTable td:nth-child(2) {
+  width: 12%;
+  max-width: 12%;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* 규격도 정리 */
+#detailInputTable th:nth-child(4),
+#detailInputTable td:nth-child(4) {
+  width: 12%;
+  max-width: 12%;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* 견적상세 보기 테이블 */
+.detail-responsive-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* 보기에서도 품목명/비고 폭 맞춤 */
+.detail-responsive-table th:nth-child(2),
+.detail-responsive-table td:nth-child(2),
+.detail-responsive-table th:nth-child(7),
+.detail-responsive-table td:nth-child(7) {
+  width: 16%;
+  max-width: 16%;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* 모바일 카드형도 글씨 확대 */
+.detail-mobile-card,
+.detail-mobile-card input,
+.detail-mobile-card select,
+.detail-mobile-card textarea {
+  font-size: 17px;
+}
+
+.detail-mobile-amount {
+  font-size: 19px;
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  thead th,
+  tbody td,
+  tbody td input,
+  tbody td select,
+  tbody td textarea {
+    font-size: 15px;
+  }
+
+  .card-header {
+    font-size: 22px;
+  }
+
+  .detail-header h3 {
+    font-size: 26px;
+  }
+
+  .mini-card .value,
+  .sum-box .sum-value {
+    font-size: 20px;
+  }
+}
