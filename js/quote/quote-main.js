@@ -358,26 +358,11 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       const wt = workTypesCache.find(x => String(x.id) === String(workTypeId));
       row.work_name = wt ? wt.work_name : row.work_name;
 
-      if (row.material_id) {
-        const selectedMaterial = materialsCache.find(x => String(x.id) === String(row.material_id));
-        if (!selectedMaterial || String(selectedMaterial.work_type_id ?? "") !== String(workTypeId ?? "")) {
-          row.material_id = "";
-          row.item_name = "";
-          row.spec = "";
-          row.unit = "";
-          row.cost_material = 0;
-          row.cost_labor = 0;
-          row.cost_expense = 0;
-        }
-      }
-
       updateComputedAmounts(row);
       calculateAll();
       maybeAutoAppendRow(id);
 
-      if (isMobileDetailMode()) {
-        renderMobileDetailCards();
-      } else {
+      if (!isMobileDetailMode()) {
         renderDetailRows();
       }
     }
@@ -390,19 +375,11 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       const material = materialsCache.find(x => String(x.id) === String(materialId));
 
       if (!material) {
-        row.item_name = "";
-        row.spec = "";
-        row.unit = "";
-        row.cost_material = 0;
-        row.cost_labor = 0;
-        row.cost_expense = 0;
         updateComputedAmounts(row);
         calculateAll();
         maybeAutoAppendRow(id);
 
-        if (isMobileDetailMode()) {
-          renderMobileDetailCards();
-        } else {
+        if (!isMobileDetailMode()) {
           renderDetailRows();
         }
         return;
@@ -425,9 +402,7 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       calculateAll();
       maybeAutoAppendRow(id);
 
-      if (isMobileDetailMode()) {
-        renderMobileDetailCards();
-      } else {
+      if (!isMobileDetailMode()) {
         renderDetailRows();
       }
     }
@@ -1639,12 +1614,11 @@ async function syncConfirmedSiteAddressToOrderDb(quoteNo, quoteStatus, siteAddre
   try {
   
 
-    const normalizedStatus = String(quoteStatus || "").trim();
+     const normalizedStatus = String(quoteStatus || "").trim();
     const normalizedAddress = String(siteAddress || "").trim();
+    const normalizedQuoteNo = String(quoteNo || "").trim();
 
-  
-
-    if (normalizedStatus !== "확정견적") {
+    if (normalizedStatus !== "확정견적" && normalizedStatus !== "공사마감") {
            return;
     }
 
@@ -1662,7 +1636,7 @@ async function syncConfirmedSiteAddressToOrderDb(quoteNo, quoteStatus, siteAddre
 
     const { data, error } = await orderDb
       .from("order_sites")
-      .upsert([payload], { onConflict: "site_address" })
+      .upsert([payload], { onConflict: "estimate_quote_no" })
       .select();
 
     if (error) {
