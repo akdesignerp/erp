@@ -2438,3 +2438,41 @@ tbody td textarea {
     font-size: 20px;
   }
 }
+
+
+/* ===== 프린터 선 진하게 (약 +40%) ===== */
+@media print {
+
+  /* 기본 테이블 라인 */
+  table,
+  .pdf-table,
+  .pdf-summary-table,
+  .summary-responsive-table,
+  .detail-responsive-table {
+    border: 1.4px solid #000 !important;
+  }
+
+  /* 셀 라인 */
+  th,
+  td,
+  .pdf-table th,
+  .pdf-table td,
+  .pdf-summary-table th,
+  .pdf-summary-table td {
+    border: 1.4px solid #000 !important;
+  }
+
+  /* 구분선 (더 강조) */
+  .pdf-divider-row td,
+  .preview-divider-row td {
+    border-top: 2.2px solid #000 !important;
+  }
+
+  /* 카드 테두리 */
+  .card,
+  .contract-card,
+  .contract-subcard,
+  .print-cover-box {
+    border: 1.4px solid #000 !important;
+  }
+}
