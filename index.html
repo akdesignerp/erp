@@ -54,7 +54,7 @@
 <div id="tab-write">
   <div class="main-grid">
     <div class="card">
-      <div class="card-header">기본 정보</div>
+      <div class="card-header title-fixed">기본 정보</div>
       <div class="card-body">
         <div class="form-grid-4">
           <div class="field"><label>견적번호</label><input id="quote_no" readonly /></div>
@@ -91,7 +91,7 @@
             <select id="quote_status">
               <option value="가견적">가견적</option>
               <option value="확정견적">확정견적</option>
-              <option value="보류">보류</option>
+              <option value="공사마감">공사마감</option>
             </select>
           </div>
 
@@ -114,7 +114,7 @@
 
     <div class="right-panel">
       <div class="card">
-        <div class="card-header">합계 정보</div>
+        <div class="card-header title-fixed">합계 정보</div>
         <div class="card-body">
           <div class="sum-box"><div class="sum-label">직접공사비(상세합)</div><div class="sum-value" id="direct_cost_display">₩ 0</div></div>
           <div class="sum-box"><div class="sum-label">간접비 합계</div><div class="sum-value" id="indirect_cost_display">₩ 0</div></div>
@@ -128,23 +128,23 @@
 
   <div class="card detail-card">
     <div class="detail-header">
-      <h3>견적 상세 입력</h3>
+      <h3 class="title-fixed">견적 상세 입력</h3>
     </div>
+
+    <div id="materialSearchPanel" class="material-search-panel"></div>
 
     <div class="table-wrap detail-input-scroll">
       <table id="detailInputTable">
         <colgroup>
-          <col style="width: 50px;"><col style="width: 120px;"><col style="width: 120px;"><col style="width: 140px;">
-          <col style="width: 150px;"><col style="width: 110px;"><col style="width: 70px;"><col style="width: 70px;">
-          <col style="width: 90px;"><col style="width: 90px;"><col style="width: 90px;"><col style="width: 160px;">
-          <col style="width: 150px;"><col style="width: 90px;">
+          <col style="width: 50px;"><col style="width: 130px;"><col style="width: 170px;">
+          <col style="width: 120px;"><col style="width: 80px;"><col style="width: 80px;">
+          <col style="width: 95px;"><col style="width: 95px;"><col style="width: 95px;">
+          <col style="width: 150px;"><col style="width: 170px;"><col style="width: 90px;">
         </colgroup>
         <thead>
           <tr>
             <th>No</th>
-            <th>공종선택</th>
             <th>공종명</th>
-            <th>품목선택</th>
             <th>품목명</th>
             <th>규격</th>
             <th>단위</th>
@@ -173,7 +173,7 @@
 
 <div id="tab-summary" class="hidden">
   <div class="card">
-    <div class="card-header">견적요약</div>
+    <div class="card-header title-fixed">견적요약</div>
     <div class="card-body">
       <div class="summary-responsive-wrap">
         <table id="summaryPreviewTable" class="summary-responsive-table">
@@ -198,7 +198,7 @@
 
 <div id="tab-detail" class="hidden">
   <div class="card">
-    <div class="card-header">견적상세</div>
+    <div class="card-header title-fixed">견적상세</div>
     <div class="card-body">
       <div class="detail-responsive-wrap">
         <table id="detailPreviewTable" class="detail-responsive-table">
@@ -232,7 +232,7 @@
 
 <div id="tab-counsel" class="hidden">
   <div class="card">
-    <div class="card-header">상담일지</div>
+    <div class="card-header title-fixed">상담일지</div>
     <div class="card-body">
       <div class="form-grid-4">
         <div class="field"><label>상담일자</label><input id="counsel_date" type="date" /></div>
@@ -241,6 +241,7 @@
         <div class="field"><label>현장명</label><input id="counsel_site_name" /></div>
         <div class="field" style="grid-column: span 4;"><label>현장주소</label><input id="counsel_site_address" /></div>
         <div class="field memo-box" style="grid-column: span 4;"><label>상담내용</label><textarea id="counsel_memo" placeholder="상담내용 입력"></textarea></div>
+        <input id="counsel_material_notify" type="hidden" value="1" />
       </div>
       <div class="inline-actions" style="margin-top:12px;">
         <button class="btn-light" type="button" onclick="saveCounselLog()">상담일지 저장</button>
@@ -264,7 +265,7 @@
 <div id="tab-contract" class="hidden">
   <div class="contract-toolbar screen-only">
     <div class="card">
-      <div class="card-header screen-only">계약서작성</div>
+      <div class="card-header screen-only title-fixed">계약서작성</div>
       <div class="card-body">
         <div class="form-grid-4">
           <div class="field"><label>견적번호</label><input id="contract_quote_no_input" readonly /></div>
@@ -391,7 +392,7 @@
 <div id="tab-company" class="hidden">
 
   <div class="card">
-    <div class="card-header">회사관리</div>
+    <div class="card-header title-fixed">회사관리</div>
     <div class="card-body">
 
       <div class="summary-strip" style="margin-bottom:16px;">
@@ -430,12 +431,11 @@
   <button class="btn-light" onclick="saveCompanyProfit()">회사수익 저장</button>
 
 </div>
-         <div class="table-wrap company-responsive-wrap">
-  <table class="company-responsive-table company-profit-table">
+         <div class="table-wrap company-responsive-wrap company-profit-scroll-wrap">
+  <table class="company-responsive-table company-profit-table" id="companyProfitTable">
     <thead>
       <tr>
         <th>No</th>
-        <th>구분</th>
         <th>항목명</th>
         <th>고객견적가</th>
         <th>노무비(업체)</th>
@@ -446,7 +446,6 @@
         <th>예상이익</th>
         <th>실이익</th>
         <th>비고</th>
-        <th>삭제</th>
       </tr>
     </thead>
     <tbody id="companyProfitBody"></tbody>
@@ -558,20 +557,16 @@
         <button class="btn-light" onclick="closeLoadModal()">닫기</button>
       </div>
       <div class="modal-body">
-        <div class="search-grid">
-          <input id="loadSearchInput" placeholder="고객명 / 현장명 / 현장주소 / 견적번호 일부 입력" oninput="searchQuotes()" />
-          <button class="btn-dark" onclick="searchQuotes()">검색</button>
+        <div class="search-grid load-search-grid">
+          <input id="loadSearchInput" placeholder="고객명 / 현장주소로 검색" oninput="searchQuotes()" />
           <button class="btn-light" onclick="clearQuoteSearch()">초기화</button>
-        </div><div class="table-wrap">
-      <table style="min-width:960px;">
+        </div><div class="table-wrap load-list-wrap">
+      <table class="load-quote-table" style="min-width:520px;">
         <thead>
           <tr>
-            <th>견적번호</th>
             <th>작성일</th>
             <th>고객명</th>
-            <th>현장명</th>
             <th>현장주소</th>
-            <th>총금액</th>
             <th>선택</th>
           </tr>
         </thead>
@@ -579,6 +574,11 @@
       </table>
     </div>
     <div id="loadSearchEmpty" class="search-result-empty hidden">검색 결과가 없습니다.</div>
+    <div class="load-pager" id="loadSearchPager">
+      <button class="btn-light" type="button" onclick="moveQuoteSearchPage(-1)">이전화면</button>
+      <span id="loadSearchPageInfo">1 / 1</span>
+      <button class="btn-light" type="button" onclick="moveQuoteSearchPage(1)">다음화면</button>
+    </div>
   </div>
 </div>
 
