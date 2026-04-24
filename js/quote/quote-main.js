@@ -83,6 +83,9 @@ document.addEventListener("keydown", (e) => {
     let materialsCache = [];
     let autoAppendGuard = false;
     let quoteSearchCache = [];
+    let quoteSearchFiltered = [];
+    let quoteSearchPage = 1;
+    const QUOTE_SEARCH_PAGE_SIZE = 6;
     let currentQuoteDbTotalAmount = 0;
 
     const WORK_DISPLAY_ORDER = [
@@ -427,7 +430,380 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
       return html;
     }
 
+    let comboState = {
+      type: "",
+      rowId: ""
+    };
+
+    let materialSearchState = {
+      query: "",
+      open: false
+    };
+
+    function normalizeComboText(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function setComboState(type, rowId) {
+      comboState = {
+        type: type || "",
+        rowId: rowId || ""
+      };
+    }
+
+    function isComboOpen(type, rowId) {
+      return comboState.type === type && String(comboState.rowId) === String(rowId);
+    }
+
+    function closeAllCombos() {
+      setComboState("", "");
+      if (typeof renderDetailRows === "function") renderDetailRows();
+      if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+    }
+
+    function bindComboOutsideCloseOnce() {
+      if (window.__akComboOutsideBound) return;
+      window.__akComboOutsideBound = true;
+      document.addEventListener("click", (event) => {
+        if (event.target.closest(".erp-combo")) return;
+        if (!comboState.type || !comboState.rowId) return;
+        closeAllCombos();
+      });
+    }
+
+    function getWorkTypeMatches(query) {
+      const q = normalizeComboText(query);
+      let list = [...(workTypesCache || [])];
+      if (q) {
+        list = list.filter(w => normalizeComboText(w.work_name).includes(q));
+      }
+      return list.slice(0, 20);
+    }
+
+    function getMaterialMatches(query, rowWorkTypeId) {
+      const q = normalizeComboText(query);
+      let list = [...(materialsCache || [])];
+      if (rowWorkTypeId) {
+        list = list.filter(m => String(m.work_type_id ?? "") === String(rowWorkTypeId));
+      }
+      if (q) {
+        list = list.filter(m => {
+          const itemName = normalizeComboText(m.item_name);
+          const spec = normalizeComboText(m.spec);
+          const unit = normalizeComboText(m.unit);
+          return itemName.includes(q) || spec.includes(q) || unit.includes(q);
+        });
+      }
+      return list.slice(0, 20);
+    }
+
+    function openWorkTypeCombo(rowId) {
+      setComboState("work", rowId);
+      if (typeof renderDetailRows === "function") renderDetailRows();
+      if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+    }
+
+    function openMaterialCombo(rowId) {
+      setComboState("material", rowId);
+      if (typeof renderDetailRows === "function") renderDetailRows();
+      if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+    }
+
+    function handleWorkTypeComboInput(rowId, value) {
+      updateRowValue(rowId, 'work_name', value);
+      openWorkTypeCombo(rowId);
+      maybeAutoAppendRow(rowId);
+    }
+
+    function handleMaterialComboInput(rowId, value) {
+      updateRowValue(rowId, 'item_name', value);
+      openMaterialCombo(rowId);
+      maybeAutoAppendRow(rowId);
+    }
+
+    function selectWorkTypeFromCombo(rowId, workTypeId) {
+      handleWorkTypeChange(rowId, workTypeId);
+      setComboState("", "");
+      renderDetailRows();
+      if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+    }
+
+    function selectMaterialFromCombo(rowId, materialId) {
+      handleMaterialChange(rowId, materialId);
+      setComboState("", "");
+      renderDetailRows();
+      if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+    }
+
+    function handleWorkTypeComboBlur(rowId) {
+      setTimeout(() => {
+        const row = detailRows.find(r => String(r.id) === String(rowId));
+        if (!row) return;
+        const typed = normalizeComboText(row.work_name);
+        if (typed) {
+          const exact = (workTypesCache || []).find(w => normalizeComboText(w.work_name) === typed);
+          if (exact) {
+            handleWorkTypeChange(rowId, exact.id);
+            setComboState("", "");
+            renderDetailRows();
+            if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+            return;
+          }
+        }
+        if (comboState.type === "work" && String(comboState.rowId) === String(rowId)) {
+          setComboState("", "");
+          renderDetailRows();
+          if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+        }
+      }, 150);
+    }
+
+    function handleMaterialComboBlur(rowId) {
+      setTimeout(() => {
+        const row = detailRows.find(r => String(r.id) === String(rowId));
+        if (!row) return;
+        const typed = normalizeComboText(row.item_name);
+        const list = getMaterialMatches(row.item_name, row.work_type_id);
+        if (typed) {
+          const exact = list.find(m => normalizeComboText(m.item_name) === typed);
+          if (exact) {
+            handleMaterialChange(rowId, exact.id);
+            setComboState("", "");
+            renderDetailRows();
+            if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+            return;
+          }
+        }
+        if (comboState.type === "material" && String(comboState.rowId) === String(rowId)) {
+          setComboState("", "");
+          renderDetailRows();
+          if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+        }
+      }, 150);
+    }
+
+    function renderComboItems(items, type, rowId) {
+      if (!items.length) {
+        return `<div class="combo-empty">검색 결과 없음</div>`;
+      }
+
+      if (type === "work") {
+        return items.map(item => `
+          <button type="button" class="combo-item" onclick="selectWorkTypeFromCombo('${rowId}', '${item.id}')">${escapeHtml(item.work_name || '')}</button>
+        `).join("");
+      }
+
+      return items.map(item => `
+        <button type="button" class="combo-item" onclick="selectMaterialFromCombo('${rowId}', '${item.id}')">
+          <span class="combo-item-title">${escapeHtml(item.item_name || '')}</span>
+          <span class="combo-item-sub">${escapeHtml([item.spec || '-', item.unit || '-'].join(' / '))}</span>
+        </button>
+      `).join("");
+    }
+
+    function renderWorkTypeCombo(row, mobileMode = false) {
+      const items = getWorkTypeMatches(row.work_name);
+      const openClass = isComboOpen("work", row.id) ? " open" : "";
+      return `
+        <div class="erp-combo${openClass} ${mobileMode ? 'mobile-combo' : ''}">
+          <input
+            type="text"
+            value="${escapeHtml(row.work_name || '')}"
+            onfocus="openWorkTypeCombo('${row.id}')"
+            oninput="handleWorkTypeComboInput('${row.id}', this.value)"
+            onchange="updateRowValue('${row.id}','work_name',this.value); maybeAutoAppendRow('${row.id}');"
+            onblur="handleWorkTypeComboBlur('${row.id}')"
+            placeholder="공종명 검색 또는 입력"
+            autocomplete="off"
+          />
+          <button type="button" class="combo-toggle" onclick="openWorkTypeCombo('${row.id}')">▾</button>
+          ${isComboOpen("work", row.id) ? `<div class="combo-menu">${renderComboItems(items, 'work', row.id)}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function renderMaterialCombo(row, mobileMode = false) {
+      const items = getMaterialMatches(row.item_name, row.work_type_id);
+      const openClass = isComboOpen("material", row.id) ? " open" : "";
+      return `
+        <div class="erp-combo${openClass} ${mobileMode ? 'mobile-combo' : ''}">
+          <input
+            type="text"
+            value="${escapeHtml(row.item_name || '')}"
+            onfocus="openMaterialCombo('${row.id}')"
+            oninput="handleMaterialComboInput('${row.id}', this.value)"
+            onchange="updateRowValue('${row.id}','item_name',this.value); maybeAutoAppendRow('${row.id}');"
+            onblur="handleMaterialComboBlur('${row.id}')"
+            placeholder="품목명 검색 또는 입력"
+            autocomplete="off"
+          />
+          <button type="button" class="combo-toggle" onclick="openMaterialCombo('${row.id}')">▾</button>
+          ${isComboOpen("material", row.id) ? `<div class="combo-menu">${renderComboItems(items, 'material', row.id)}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function getMaterialWorkName(material) {
+      const wt = (workTypesCache || []).find(x => String(x.id) === String(material.work_type_id ?? ""));
+      return material.work_name || (wt ? wt.work_name : "");
+    }
+
+    function getMaterialSearchMatches(query) {
+      const q = normalizeComboText(query);
+
+      // 검색어가 없으면 전체 품목을 보여주지 않는다.
+      // 입력한 내용과 비슷한 품목만 전부 보여준다. 개수 제한 없음.
+      if (!q) return [];
+
+      return [...(materialsCache || [])].filter(m => {
+        const workName = normalizeComboText(getMaterialWorkName(m));
+        const itemName = normalizeComboText(m.item_name);
+        const spec = normalizeComboText(m.spec);
+        const unit = normalizeComboText(m.unit);
+        const keyword = normalizeComboText(m.keyword || m.keywords || m.search_text || "");
+        return (
+          itemName.includes(q) ||
+          workName.includes(q) ||
+          spec.includes(q) ||
+          unit.includes(q) ||
+          keyword.includes(q)
+        );
+      });
+    }
+
+    function renderMaterialSearchItems(items) {
+      if (!items.length) return `<div class="material-search-empty">검색 결과 없음</div>`;
+      return items.map(m => {
+        const workName = getMaterialWorkName(m) || "공종없음";
+        const priceText = [
+          `자재 ${formatWon(toNum(m.cost_material))}`,
+          `노무 ${formatWon(toNum(m.cost_labor))}`,
+          `경비 ${formatWon(toNum(m.cost_expense))}`
+        ].join(" / ");
+        return `
+          <button type="button" class="material-search-item" onclick="selectMaterialFromSearchPanel('${m.id}')">
+            <span class="material-search-title">${escapeHtml(m.item_name || '')}</span>
+            <span class="material-search-meta">${escapeHtml(workName)} · ${escapeHtml(m.spec || '-')} · ${escapeHtml(m.unit || '-')}</span>
+            <span class="material-search-price">${priceText}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderMaterialSearchPanel() {
+      const panel = document.getElementById("materialSearchPanel");
+      if (!panel) return;
+      panel.innerHTML = `
+        <div class="material-search-head">
+          <h4>품목명 검색</h4>
+          <div id="materialSearchCount" class="material-search-count hidden"></div>
+        </div>
+        <div class="material-search-box">
+          <input
+            id="materialQuickSearchInput"
+            type="text"
+            value="${escapeHtml(materialSearchState.query || '')}"
+            placeholder="품목명 검색"
+            onfocus="openMaterialSearchPanel()"
+            oninput="handleMaterialSearchInput(this.value)"
+            autocomplete="off"
+            inputmode="search"
+          />
+        </div>
+        <div id="materialSearchListWrap" class="material-search-list hidden"></div>
+      `;
+      updateMaterialSearchResults();
+    }
+
+    function updateMaterialSearchResults() {
+      const query = (materialSearchState.query || "").trim();
+      const listWrap = document.getElementById("materialSearchListWrap");
+      const countBox = document.getElementById("materialSearchCount");
+      if (!listWrap || !countBox) return;
+
+      if (!materialSearchState.open || !query) {
+        listWrap.classList.add("hidden");
+        listWrap.innerHTML = "";
+        countBox.classList.add("hidden");
+        countBox.textContent = "";
+        return;
+      }
+
+      const items = getMaterialSearchMatches(query);
+      countBox.classList.remove("hidden");
+      countBox.textContent = `검색결과 ${items.length}건`;
+      listWrap.classList.remove("hidden");
+      listWrap.innerHTML = `
+        <div class="material-search-list-title">검색 목록</div>
+        ${renderMaterialSearchItems(items)}
+      `;
+    }
+
+    function openMaterialSearchPanel() {
+      materialSearchState.open = true;
+      updateMaterialSearchResults();
+    }
+
+    function handleMaterialSearchInput(value) {
+      materialSearchState.query = value || "";
+      materialSearchState.open = true;
+      updateMaterialSearchResults();
+    }
+
+    function getMaterialInsertTargetRow() {
+      let lastRow = detailRows[detailRows.length - 1];
+      if (!lastRow) {
+        lastRow = buildEmptyRow();
+        detailRows.push(lastRow);
+      }
+      if (isMeaningfulRow(lastRow)) {
+        lastRow = buildEmptyRow();
+        detailRows.push(lastRow);
+      }
+      return lastRow;
+    }
+
+    function applyMaterialToRow(row, material) {
+      if (!row || !material) return;
+      row.material_id = material.id;
+      row.work_type_id = material.work_type_id || row.work_type_id || "";
+      row.work_name = getMaterialWorkName(material) || row.work_name || "";
+      row.item_name = material.item_name || row.item_name || "";
+      row.spec = material.spec || "";
+      row.unit = material.unit || "";
+      row.cost_material = toNum(material.cost_material);
+      row.cost_labor = toNum(material.cost_labor);
+      row.cost_expense = toNum(material.cost_expense);
+      if (!toNum(row.qty)) row.qty = toNum(material.default_qty || material.qty || 1) || 1;
+      updateComputedAmounts(row);
+    }
+
+    function selectMaterialFromSearchPanel(materialId) {
+      const material = (materialsCache || []).find(x => String(x.id) === String(materialId));
+      if (!material) return;
+      const row = getMaterialInsertTargetRow();
+      applyMaterialToRow(row, material);
+      const lastRow = detailRows[detailRows.length - 1];
+      if (lastRow && String(lastRow.id) === String(row.id) && isMeaningfulRow(row)) {
+        detailRows.push(buildEmptyRow());
+      }
+      materialSearchState.query = "";
+      materialSearchState.open = false;
+      renderDetailRows();
+      if (typeof renderMobileDetailCards === "function") renderMobileDetailCards();
+      calculateAll();
+      if (typeof refreshCompanySummary === "function") refreshCompanySummary();
+      if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(false);
+      setTimeout(() => {
+        const input = document.getElementById("materialQuickSearchInput");
+        if (input) input.focus();
+      }, 0);
+    }
+
     function renderDetailRows() {
+      bindComboOutsideCloseOnce();
+      renderMaterialSearchPanel();
+
       const body = document.getElementById("quoteDetailBody");
       if (!body) return;
       body.innerHTML = "";
@@ -438,17 +814,7 @@ if (typeof syncContractFromEstimate === "function") syncContractFromEstimate(fal
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td class="row-no">${idx + 1}</td>
-          <td>
-            <select onchange="handleWorkTypeChange('${row.id}', this.value)">
-              ${makeWorkTypeOptions(row.work_type_id)}
-            </select>
-          </td>
           <td><input value="${escapeHtml(row.work_name)}" onchange="updateRowValue('${row.id}','work_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="공종명" /></td>
-          <td>
-            <select onchange="handleMaterialChange('${row.id}', this.value)">
-              ${makeMaterialOptions(row.material_id, row.work_type_id)}
-            </select>
-          </td>
           <td><input value="${escapeHtml(row.item_name)}" onchange="updateRowValue('${row.id}','item_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="품목명" /></td>
           <td><input value="${escapeHtml(row.spec)}" onchange="updateRowValue('${row.id}','spec',this.value); maybeAutoAppendRow('${row.id}');" placeholder="규격" /></td>
           <td><input type="text" value="${escapeHtml(row.unit)}" onchange="updateRowValue('${row.id}','unit',this.value); maybeAutoAppendRow('${row.id}');" placeholder="단위" /></td>
@@ -502,6 +868,15 @@ function renderPreviewTables() {
   }
 
   if (summaryTotalsBox) {
+    const quoteMemoValue = (document.getElementById("quote_memo")?.value || "").trim();
+    const quoteMemoHtml = quoteMemoValue
+      ? `
+  <div class="summary-memo-card">
+    <div class="summary-memo-title">메모</div>
+    <div class="summary-memo-content">${escapeHtml(quoteMemoValue).replace(/\n/g, "<br>")}</div>
+  </div>`
+      : "";
+
     summaryTotalsBox.innerHTML = `
   <div class="detail-total-row">
     <span>직접공사비</span>
@@ -523,10 +898,9 @@ function renderPreviewTables() {
     <span>총 합 계</span>
     <strong>${formatWon(totals.finalTotal)}</strong>
   </div>
+  ${quoteMemoHtml}
 `;
   }
-
-  // 견적상세
   if (previewBody) {
     previewBody.innerHTML = "";
 
@@ -637,13 +1011,18 @@ function calculateAll() {
   renderPreviewTables();
 }
 
+function normalizeQuoteStatusValue(value) {
+  const v = String(value || "").trim();
+  return v === "보류" ? "공사마감" : v;
+}
+
 function syncTopSummary() {
   document.getElementById("topWriteDate").textContent = document.getElementById("quote_date").value || "미입력";
   document.getElementById("topCustomerName").textContent = document.getElementById("customer_name").value || "미입력";
   document.getElementById("topSiteName").textContent = document.getElementById("site_name").value || "미입력";
   document.getElementById("topWorkType").textContent = document.getElementById("work_type").value || "미입력";
   document.getElementById("topRevision").textContent = (document.getElementById("revision_no").value || "1") + "차";
-  document.getElementById("topQuoteStatus").textContent = document.getElementById("quote_status").value || "미입력";
+  document.getElementById("topQuoteStatus").textContent = normalizeQuoteStatusValue(document.getElementById("quote_status").value) || "미입력";
 }
 
 function bindBasicEvents() {
@@ -967,7 +1346,7 @@ async function saveQuote() {
     const quote_no = document.getElementById("quote_no").value.trim();
     const quote_date = document.getElementById("quote_date").value;
     const revision_no = toNum(document.getElementById("revision_no").value) || 1;
-    const quote_status = document.getElementById("quote_status").value;
+    const quote_status = normalizeQuoteStatusValue(document.getElementById("quote_status").value);
     const memo = document.getElementById("quote_memo").value.trim();
 
     if (!quote_no) return alert("견적번호가 없습니다.");
@@ -1125,8 +1504,9 @@ async function fetchQuoteSearchList() {
 function openLoadModal() {
   document.getElementById("loadModal").classList.add("show");
   document.getElementById("loadSearchInput").value = "";
+  quoteSearchPage = 1;
   fetchQuoteSearchList()
-    .then(() => renderQuoteSearchResults(""))
+    .then(() => renderQuoteSearchResults("", 1))
     .catch(err => alert("검색 목록 불러오기 실패: " + err.message));
 }
 
@@ -1136,21 +1516,32 @@ function closeLoadModal() {
 
 function clearQuoteSearch() {
   document.getElementById("loadSearchInput").value = "";
-  renderQuoteSearchResults("");
+  quoteSearchPage = 1;
+  renderQuoteSearchResults("", 1);
 }
 
 function searchQuotes() {
   const keyword = document.getElementById("loadSearchInput").value.trim();
-  renderQuoteSearchResults(keyword);
+  quoteSearchPage = 1;
+  renderQuoteSearchResults(keyword, 1);
 }
 
-function renderQuoteSearchResults(keyword) {
+function moveQuoteSearchPage(direction) {
+  const totalPages = Math.max(1, Math.ceil(quoteSearchFiltered.length / QUOTE_SEARCH_PAGE_SIZE));
+  quoteSearchPage = Math.min(totalPages, Math.max(1, quoteSearchPage + direction));
+  const keyword = document.getElementById("loadSearchInput").value.trim();
+  renderQuoteSearchResults(keyword, quoteSearchPage);
+}
+
+function renderQuoteSearchResults(keyword, page = quoteSearchPage) {
   const body = document.getElementById("loadSearchBody");
   const emptyBox = document.getElementById("loadSearchEmpty");
+  const pager = document.getElementById("loadSearchPager");
+  const pageInfo = document.getElementById("loadSearchPageInfo");
   body.innerHTML = "";
 
   const normalized = keyword.toLowerCase();
-  const filtered = quoteSearchCache.filter(row => {
+  quoteSearchFiltered = quoteSearchCache.filter(row => {
     if (!normalized) return true;
     const customerName = String(row.customers?.customer_name || "").toLowerCase();
     const siteName = String(row.sites?.site_name || "").toLowerCase();
@@ -1159,21 +1550,27 @@ function renderQuoteSearchResults(keyword) {
     return customerName.includes(normalized) || siteName.includes(normalized) || siteAddress.includes(normalized) || quoteNo.includes(normalized);
   });
 
-  if (!filtered.length) {
+  if (!quoteSearchFiltered.length) {
     emptyBox.classList.remove("hidden");
+    if (pager) pager.classList.add("hidden");
     return;
   }
   emptyBox.classList.add("hidden");
+  if (pager) pager.classList.remove("hidden");
 
-  filtered.forEach(row => {
+  const totalPages = Math.max(1, Math.ceil(quoteSearchFiltered.length / QUOTE_SEARCH_PAGE_SIZE));
+  quoteSearchPage = Math.min(totalPages, Math.max(1, page));
+  const startIndex = (quoteSearchPage - 1) * QUOTE_SEARCH_PAGE_SIZE;
+  const visibleRows = quoteSearchFiltered.slice(startIndex, startIndex + QUOTE_SEARCH_PAGE_SIZE);
+
+  if (pageInfo) pageInfo.textContent = `${quoteSearchPage} / ${totalPages}`;
+
+  visibleRows.forEach(row => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${escapeHtml(row.quote_no || "")}</td>
       <td>${escapeHtml(row.quote_date || "")}</td>
       <td>${escapeHtml(row.customers?.customer_name || "")}</td>
-      <td>${escapeHtml(row.sites?.site_name || "")}</td>
       <td>${escapeHtml(row.sites?.site_address || "")}</td>
-      <td class="align-right">${formatWon(row.total_amount || 0)}</td>
       <td><button class="search-row-btn" onclick="selectQuoteFromSearch(${row.id})">불러오기</button></td>
     `;
     body.appendChild(tr);
@@ -1204,7 +1601,7 @@ async function selectQuoteFromSearch(quoteId) {
     document.getElementById("site_address").value = quote.sites?.site_address || "";
     document.getElementById("area_size").value = quote.sites?.area_size || "";
     document.getElementById("work_type").value = quote.sites?.work_type || "본공사";
-    document.getElementById("quote_status").value = quote.quote_status || "가견적";
+    document.getElementById("quote_status").value = normalizeQuoteStatusValue(quote.quote_status) || "가견적";
     document.getElementById("vat_type").value = (quote.vat_type === "0" || quote.vat_type === 0 || quote.vat_type === "10" || quote.vat_type === 10) ? String(quote.vat_type) : "10";
     document.getElementById("quote_memo").value = quote.memo || "";
 
@@ -1440,7 +1837,7 @@ function buildCounselPrintSheet() {
   const siteName = document.getElementById("counsel_site_name")?.value || document.getElementById("site_name")?.value || "-";
   const siteAddress = document.getElementById("counsel_site_address")?.value || document.getElementById("site_address")?.value || "-";
   const memo = document.getElementById("counsel_memo")?.value || "-";
-  const status = document.getElementById("quote_status")?.value || document.getElementById("topQuoteStatus")?.textContent || "-";
+  const status = normalizeQuoteStatusValue(document.getElementById("quote_status")?.value || document.getElementById("topQuoteStatus")?.textContent) || "-";
   return `
     <div class="pdf-sheet pdf-summary-sheet">
       <div class="pdf-section-title">상담일지</div>
@@ -1930,6 +2327,8 @@ function cloneHtmlWithLiveFormValues(sourceEl) {
 }
 
 function renderMobileDetailCards() {
+  bindComboOutsideCloseOnce();
+
   const wrap = document.getElementById("mobileDetailInput");
   if (!wrap) return;
 
@@ -1947,23 +2346,8 @@ function renderMobileDetailCards() {
 
         <div class="detail-mobile-grid detail-mobile-grid-2">
           <div class="field">
-            <label>공종선택</label>
-            <select onchange="handleWorkTypeChange('${row.id}', this.value)">
-              ${makeWorkTypeOptions(row.work_type_id)}
-            </select>
-          </div>
-          <div class="field">
             <label>공종명</label>
             <input value="${escapeHtml(row.work_name || "")}" onchange="updateRowValue('${row.id}','work_name',this.value); maybeAutoAppendRow('${row.id}');" placeholder="공종명" />
-          </div>
-        </div>
-
-        <div class="detail-mobile-grid detail-mobile-grid-2">
-          <div class="field">
-            <label>품목선택</label>
-            <select onchange="handleMaterialChange('${row.id}', this.value)">
-              ${makeMaterialOptions(row.material_id, row.work_type_id)}
-            </select>
           </div>
           <div class="field">
             <label>품목명</label>
