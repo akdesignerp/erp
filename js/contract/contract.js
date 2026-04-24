@@ -7,12 +7,18 @@
   ];
   let contractPayments = [];
   let latestCounselRows = [];
+  let counselListPage = 1;
+  const COUNSEL_LIST_PAGE_SIZE = 6;
 
   function q(id){ return document.getElementById(id); }
   function toNumSafe(v){ return Number(String(v ?? "").replace(/[^\d.-]/g, "").trim()) || 0; }
   function formatWonSafe(num){ return "₩ " + Number(num || 0).toLocaleString("ko-KR"); }
   function setText(id, value){ const el=q(id); if(el) el.textContent = value ?? ""; }
   function setValue(id, value){ const el=q(id); if(el) el.value = value ?? ""; }
+  const CONTRACT_PLAIN_INPUT_STYLE = "border:0!important;outline:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important;padding:0!important;margin:0!important;appearance:none!important;-webkit-appearance:none!important;";
+  const CONTRACT_PLAIN_TEXT_INPUT_STYLE = CONTRACT_PLAIN_INPUT_STYLE + "width:100%!important;font:inherit!important;color:inherit!important;";
+  const CONTRACT_PLAIN_RATE_INPUT_STYLE = CONTRACT_PLAIN_INPUT_STYLE + "width:42px!important;text-align:right!important;font:inherit!important;color:inherit!important;";
+
   function escapeHtml(v){
     return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
@@ -127,12 +133,12 @@
     contractPayments.forEach((row, idx) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><input class="contract-pay-label" data-idx="${idx}" value="${escapeHtml(row.label)}"></td>
+        <td><input class="contract-pay-label contract-plain-input" data-idx="${idx}" value="${escapeHtml(row.label)}" style="${CONTRACT_PLAIN_TEXT_INPUT_STYLE}"></td>
         <td id="contract_payment_amount_${idx}">₩ 0</td>
-        <td><div class="contract-rate-wrap"><input class="contract-pay-rate" data-idx="${idx}" type="text" inputmode="numeric" value="${Number(row.rate || 0)}"><span class="contract-rate-unit">%</span></div></td>
+        <td><div class="contract-rate-wrap"><input class="contract-pay-rate contract-plain-input" data-idx="${idx}" type="text" inputmode="numeric" value="${Number(row.rate || 0)}" style="${CONTRACT_PLAIN_RATE_INPUT_STYLE}"><span class="contract-rate-unit">%</span></div></td>
         <td>
           <div style="display:flex; gap:8px; align-items:center;">
-            <input class="contract-pay-note" data-idx="${idx}" type="text" value="${escapeHtml(row.note)}" style="flex:1;">
+            <input class="contract-pay-note contract-plain-input" data-idx="${idx}" type="text" value="${escapeHtml(row.note)}" style="${CONTRACT_PLAIN_TEXT_INPUT_STYLE}flex:1!important;">
             ${idx === contractPayments.length - 1 ? "" : `<button class="btn btn-light screen-only" type="button" onclick="removeContractPaymentRow(${idx})">삭제</button>`}
           </div>
         </td>`;
@@ -277,13 +283,21 @@
     const address = (q("counsel_site_address")?.value || q("site_address")?.value || "").trim();
     if (!box) return;
     if (!rows.length) {
+      counselListPage = 1;
       box.innerHTML = `<div class="empty">${address ? `해당 현장주소(${escapeHtml(address)})의 상담일지가 없습니다.` : '저장된 상담일지가 없습니다.'}</div>`;
       return;
     }
-    box.innerHTML = rows.map((row, idx) => {
+    const totalPages = Math.max(1, Math.ceil(rows.length / COUNSEL_LIST_PAGE_SIZE));
+    counselListPage = Math.min(Math.max(1, counselListPage), totalPages);
+    const start = (counselListPage - 1) * COUNSEL_LIST_PAGE_SIZE;
+    const pageRows = rows.slice(start, start + COUNSEL_LIST_PAGE_SIZE);
+    const listHtml = pageRows.map((row, pageIdx) => {
+      const actualIdx = start + pageIdx;
       const date = String(pickCounselDate(row) || '').slice(0,10) || '-';
-      return `<button type="button" class="counsel-list-item" onclick="loadCounselLogByIndex(${idx})"><div class="counsel-list-top"><span>${date}</span><span>${escapeHtml(row.quote_status || row.status || '')}</span></div><div class="counsel-list-sub">${escapeHtml(row.customer_name || '-')}</div></button>`;
+      return `<button type="button" class="counsel-list-item" onclick="loadCounselLogByIndex(${actualIdx})"><div class="counsel-list-top"><span>${date}</span><span>${escapeHtml(row.quote_status || row.status || '')}</span></div><div class="counsel-list-sub">${escapeHtml(row.customer_name || '-')}</div></button>`;
     }).join("");
+    const pagerHtml = `<div class="counsel-pager"><button class="btn-light" type="button" onclick="moveCounselListPage(-1)" ${counselListPage <= 1 ? "disabled" : ""}>이전 페이지</button><span>${counselListPage} / ${totalPages}</span><button class="btn-light" type="button" onclick="moveCounselListPage(1)" ${counselListPage >= totalPages ? "disabled" : ""}>다음 페이지</button></div>`;
+    box.innerHTML = listHtml + pagerHtml;
   }
   function applyCounselRow(row){
     if (!row) return;
@@ -293,14 +307,22 @@
     setValue("counsel_site_name", row.site_name || q("site_name")?.value || "");
     setValue("counsel_site_address", row.site_address || "");
     setValue("counsel_memo", pickCounselMemo(row));
+    const notify = q("counsel_material_notify");
+    if (notify) notify.value = "1";
     setCounselStatus("상담일지를 불러왔습니다.");
   }
   window.loadCounselLogByIndex = function(idx){ applyCounselRow(latestCounselRows[idx]); };
+  window.moveCounselListPage = function(delta){
+    const totalPages = Math.max(1, Math.ceil(latestCounselRows.length / COUNSEL_LIST_PAGE_SIZE));
+    counselListPage = Math.min(Math.max(1, counselListPage + Number(delta || 0)), totalPages);
+    renderCounselList(latestCounselRows);
+  };
   window.loadCounselLogList = async function(){
     try {
       const currentAddress = (q("counsel_site_address")?.value || q("site_address")?.value || "").trim();
       const rows = await fetchCounselRowsRaw();
       latestCounselRows = currentAddress ? rows.filter(row => sameAddress(row.site_address, currentAddress)) : rows;
+      counselListPage = 1;
       renderCounselList(latestCounselRows);
     } catch (err) {
       console.error(err);
@@ -309,7 +331,7 @@
   };
   function buildCounselPayload(){
     const selectedStatus = q("quote_status")?.value || q("topQuoteStatus")?.textContent || "";
-    return { quote_no: q("quote_no")?.value || "", customer_name: q("counsel_name")?.value || "", customer_phone: q("counsel_phone")?.value || "", phone: q("counsel_phone")?.value || "", site_name: q("counsel_site_name")?.value || "", site_address: q("counsel_site_address")?.value || "", counsel_date: q("counsel_date")?.value || null, memo: q("counsel_memo")?.value || "", quote_status: selectedStatus, updated_at: new Date().toISOString(), created_at: new Date().toISOString() };
+    return { quote_no: q("quote_no")?.value || "", customer_name: q("counsel_name")?.value || "", customer_phone: q("counsel_phone")?.value || "", phone: q("counsel_phone")?.value || "", site_name: q("counsel_site_name")?.value || "", site_address: q("counsel_site_address")?.value || "", counsel_date: q("counsel_date")?.value || null, memo: q("counsel_memo")?.value || "", quote_status: selectedStatus, material_erp_notify: true, updated_at: new Date().toISOString(), created_at: new Date().toISOString() };
   }
   window.saveCounselLog = async function(){
     try {
