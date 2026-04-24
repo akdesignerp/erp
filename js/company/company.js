@@ -291,16 +291,6 @@ function renderCompanyProfitRows() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="align-center">${idx + 1}</td>
-      <td>
-        <select onchange="updateCompanyProfitRow('${row.id}','category_type',this.value)">
-          <option value="공정" ${row.category_type === "공정" ? "selected" : ""}>공정</option>
-          <option value="기타공사비" ${row.category_type === "기타공사비" ? "selected" : ""}>기타공사비</option>
-          <option value="폐기물비" ${row.category_type === "폐기물비" ? "selected" : ""}>폐기물비</option>
-          <option value="산재비용" ${row.category_type === "산재비용" ? "selected" : ""}>산재비용</option>
-          <option value="현장직접관리비" ${row.category_type === "현장직접관리비" ? "selected" : ""}>현장직접관리비</option>
-          <option value="회사배부관리비" ${row.category_type === "회사배부관리비" ? "selected" : ""}>회사배부관리비</option>
-        </select>
-      </td>
       <td><input value="${escapeHtml(row.item_name)}" onchange="updateCompanyProfitRow('${row.id}','item_name',this.value)" /></td>
       <td><input type="number" value="${row.customer_amount}" onchange="updateCompanyProfitRow('${row.id}','customer_amount',this.value)" /></td>
       <td><input type="number" value="${row.labor_vendor_amount}" onchange="updateCompanyProfitRow('${row.id}','labor_vendor_amount',this.value)" /></td>
@@ -311,7 +301,6 @@ function renderCompanyProfitRows() {
       <td class="align-right">${formatWon(row.estimated_profit_amount)}</td>
       <td class="align-right">${formatWon(row.actual_profit_amount)}</td>
       <td><input value="${escapeHtml(row.note)}" onchange="updateCompanyProfitRow('${row.id}','note',this.value)" /></td>
-      <td><button class="table-btn delete-btn" onclick="removeCompanyProfitRow('${row.id}')">삭제</button></td>
     `;
     body.appendChild(tr);
   });
@@ -323,15 +312,6 @@ function addCompanyProfitRow() {
   refreshCompanySummary(currentQuoteTotalAmount);
 }
 
-function removeCompanyProfitRow(id) {
-  if (!confirm("삭제하시겠습니까?")) return;
-  companyProfitRows = companyProfitRows.filter(row => row.id !== id);
-  if (companyProfitRows.length === 0) {
-    companyProfitRows.push(buildEmptyCompanyProfitRow());
-  }
-  renderCompanyProfitRows();
-  refreshCompanySummary(currentQuoteTotalAmount);
-}
 
 function updateCompanyProfitRow(id, key, value) {
   const row = companyProfitRows.find(r => r.id === id);
